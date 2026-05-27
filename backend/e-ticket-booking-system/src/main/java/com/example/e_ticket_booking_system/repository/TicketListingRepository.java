@@ -1,0 +1,17 @@
+package com.example.e_ticket_booking_system.repository;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import com.example.e_ticket_booking_system.entity.TicketListing;
+
+@Repository
+public interface TicketListingRepository extends JpaRepository<TicketListing, Long> {
+    List<TicketListing> findBySellerId(Long sellerId);
+    List<TicketListing> findByStatus(String status);
+    TicketListing findByTicketId(Long ticketId);
+    List<TicketListing> findByStatusAndExpiresAtBefore(String status, LocalDateTime time);
+}
