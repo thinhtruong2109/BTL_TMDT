@@ -4,7 +4,7 @@
 >
 > **Content-Type:** `application/json`
 >
-> **Authentication:** Các API cần xác thực phải gửi JWT token trong header:
+> **Authentication:** Các API cần xác thực dùng JWT từ cookie `accessToken` (ưu tiên) hoặc header:
 > ```
 > Authorization: Bearer <access_token>
 > ```
@@ -32,6 +32,9 @@
 ---
 
 ## 1. Authentication
+
+> **Ghi chú:** `POST /api/auth/login` và `POST /api/auth/refresh-token` chỉ trả về thông tin user; access/refresh token được set vào HttpOnly cookies (`accessToken`, `refreshToken`). `refresh-token` có thể nhận token từ body hoặc từ cookie.
+> **Database entities:** `User`, `EmailOtp`
 
 ### 1.1. Đăng ký tài khoản
 
@@ -136,7 +139,7 @@
 }
 ```
 
-**Response:** `AuthResponse` (accessToken, refreshToken, user info)
+**Response:** `UserResponse` (trong ApiResponse). Token được set vào HttpOnly cookies.
 
 ---
 
@@ -145,18 +148,18 @@
 | | |
 |---|---|
 | **URL** | `POST /api/auth/refresh-token` |
-| **Mô tả** | Lấy access token mới từ refresh token |
+| **Mô tả** | Lấy access token mới từ refresh token (body hoặc cookie) |
 | **Authorization** | ❌ Không cần |
 | **Header** | `Content-Type: application/json` |
 
-**Request Body:**
+**Request Body (optional nếu đã có cookie refreshToken):**
 ```json
 {
   "refreshToken": "eyJhbGciOi..."  // ✅ Bắt buộc
 }
 ```
 
-**Response:** `AuthResponse` (new accessToken, refreshToken, user info)
+**Response:** `UserResponse` (trong ApiResponse). Token mới được set vào HttpOnly cookies.
 
 ---
 
@@ -165,7 +168,7 @@
 | | |
 |---|---|
 | **URL** | `POST /api/auth/logout` |
-| **Mô tả** | Đăng xuất (client tự xóa token) |
+| **Mô tả** | Đăng xuất, server trả Set-Cookie để xóa `accessToken` và `refreshToken` |
 | **Authorization** | ❌ Không cần |
 | **Header** | — |
 | **Request Body** | Không có |
@@ -173,6 +176,8 @@
 ---
 
 ## 2. Users
+
+> **Database entities:** `User`
 
 ### 2.1. Xem profile cá nhân
 
@@ -293,6 +298,8 @@
 
 ## 3. Events
 
+> **Database entities:** `Event`, `EventCategory`, `Venue`, `User`, `Booking`, `Ticket`, `TicketListing`, `EventSchedule`
+
 ### 3.1. Lấy danh sách sự kiện đã publish (Public)
 
 | | |
@@ -369,6 +376,8 @@
 }
 ```
 
+> **Lưu ý:** Nếu có booking đang PENDING/CONFIRMED và có thay đổi quan trọng, hệ thống gửi email thông báo. Khi `allowTicketExchange` chuyển `false`, các vé sẽ bị đặt `transferable=false` và các listing đang FOR_SALE bị hủy.
+
 ---
 
 ### 3.5. Publish sự kiện (Organizer/Admin)
@@ -422,6 +431,8 @@
 ---
 
 ## 4. Event Categories
+
+> **Database entities:** `EventCategory`
 
 ### 4.1. Lấy tất cả categories (Public)
 
@@ -504,6 +515,8 @@
 
 ## 5. Event Schedules
 
+> **Database entities:** `EventSchedule`, `Event`
+
 ### 5.1. Lấy lịch chiếu theo event (Public)
 
 | | |
@@ -576,6 +589,8 @@
 
 ## 6. Ticket Types
 
+> **Database entities:** `TicketType`, `Event`, `Section`, `Seat`
+
 ### 6.1. Lấy loại vé theo event (Public)
 
 | | |
@@ -642,7 +657,50 @@
 
 ---
 
+### 6.5. Cập nhật loại vé (Organizer/Admin)
+
+| | |
+|---|---|
+| **URL** | `PUT /api/ticket-types/{id}` |
+| **Mô tả** | Cập nhật thông tin loại vé |
+| **Authorization** | ✅ `Bearer <token>` |
+| **Role** | 🔒 `ORGANIZER` hoặc `ADMIN` |
+| **Path Variable** | `id` — Ticket Type ID |
+| **Header** | `Authorization: Bearer <token>`, `Content-Type: application/json` |
+
+**Request Body:** (yêu cầu đủ các field chính, không hỗ trợ patch)
+```json
+{
+  "eventId": 1,                        // ✅ Bắt buộc
+  "sectionId": 1,                      // ❌ Không bắt buộc
+  "name": "VIP Updated",             // ✅ Bắt buộc
+  "description": "Mô tả mới",       // ❌ Không bắt buộc
+  "price": 600000,                     // ✅ Bắt buộc, số dương
+  "totalQuantity": 120,                // ✅ Bắt buộc, số dương
+  "maxPerBooking": 6                   // ❌ Không bắt buộc (mặc định: 10)
+}
+```
+
+> **Validation:** giống tạo mới; tổng số lượng không vượt `event.totalTickets`, section capacity và seat count nếu có `sectionId`.
+
+---
+
+### 6.6. Xóa loại vé (Organizer/Admin)
+
+| | |
+|---|---|
+| **URL** | `DELETE /api/ticket-types/{id}` |
+| **Mô tả** | Xóa loại vé |
+| **Authorization** | ✅ `Bearer <token>` |
+| **Role** | 🔒 `ORGANIZER` hoặc `ADMIN` |
+| **Path Variable** | `id` — Ticket Type ID |
+| **Request Body** | Không có |
+
+---
+
 ## 7. Bookings
+
+> **Database entities:** `Booking`, `BookingDetail`, `BookingPromoCode`, `Event`, `EventSchedule`, `TicketType`, `Seat`, `SeatReservation`, `PromoCode`, `PromoCodeEventJoin`, `Payment`, `User`
 
 ### 7.1. Tạo booking
 
@@ -676,6 +734,8 @@
 > **Lưu ý về seatIds:** Nếu bất kỳ ticket type nào trong `items` thuộc section có `hasNumberedSeats = true`, thì `seatIds` **bắt buộc**. Số lượng seatIds phải bằng tổng quantity của các ticket types có numbered seats. Ghế phải available (chưa bị HOLDING/CONFIRMED) và thuộc đúng section. Cũng cần truyền `scheduleId` khi chọn ghế.
 
 > **Lưu ý về promoCodeId:** Nếu có `promoCodeId`, hệ thống sẽ validate promo code (status ACTIVE, thời hạn, usage limit, min order amount) **và kiểm tra applicationType** (GLOBAL → tất cả event; ORGANIZER_ALL → event phải do đúng organizer tổ chức; SPECIFIC_EVENTS → event phải nằm trong danh sách PromoCodeEventJoin). Tính discount và tạo `BookingPromoCode` record. `usedCount` của promo code chỉ được tăng khi thanh toán thành công (payment callback SUCCESS).
+
+> **Lưu ý về số lượng:** Mỗi item không được vượt `ticketType.maxPerBooking`.
 
 ---
 
@@ -716,6 +776,8 @@
 
 ## 8. Payments
 
+> **Database entities:** `Payment`, `Booking`, `BookingPromoCode`, `PromoCode`, `TransactionHistory`, `OrganizerEWallet`, `WalletTransaction`
+
 ### 8.1. Tạo thanh toán
 
 | | |
@@ -729,9 +791,11 @@
 ```json
 {
   "bookingId": 1,                      // ✅ Bắt buộc
-  "paymentMethod": "PAYOS"             // ✅ Bắt buộc (PAYOS)
+  "paymentMethod": "PAYOS"             // ✅ Bắt buộc (PAYOS được xử lý tạo link)
 }
 ```
+
+> **Ghi chú:** Nếu `paymentMethod` khác `PAYOS`, hệ thống vẫn tạo Payment ở trạng thái `PENDING` nhưng không tạo link thanh toán ngoài.
 
 ---
 
@@ -820,7 +884,7 @@
 | | |
 |---|---|
 | **URL** | `GET /api/payments/payos/success` |
-| **Mô tả** | URL PayOS redirect đến khi user thanh toán xong. Backend trả thông tin payment, frontend xử lý hiển thị |
+| **Mô tả** | URL PayOS redirect sau khi user thanh toán. Backend đồng bộ trạng thái và **302 redirect** sang frontend `/payment/success` |
 | **Authorization** | ❌ Không cần |
 | **Query Params** | `orderCode` (long) ✅ Bắt buộc |
 | | `status` (String, optional) |
@@ -833,7 +897,7 @@
 | | |
 |---|---|
 | **URL** | `GET /api/payments/payos/cancel` |
-| **Mô tả** | URL PayOS redirect đến khi user hủy thanh toán trên trang PayOS |
+| **Mô tả** | URL PayOS redirect sau khi user hủy thanh toán. Backend xử lý hủy payment và **302 redirect** sang frontend `/payment/cancel` |
 | **Authorization** | ❌ Không cần |
 | **Query Param** | `orderCode` (long) ✅ Bắt buộc |
 | **Request Body** | Không có |
@@ -841,6 +905,8 @@
 ---
 
 ## 9. Tickets
+
+> **Database entities:** `Ticket`, `Booking`, `BookingDetail`, `User`
 
 ### 9.1. Lấy vé của tôi
 
@@ -898,6 +964,8 @@
 ---
 
 ## 10. Venues
+
+> **Database entities:** `Venue`, `Section`, `Seat`
 
 ### 10.1. Lấy tất cả venues (Public)
 
@@ -983,7 +1051,22 @@
 
 ---
 
+### 10.6. Xóa venue (Organizer/Admin)
+
+| | |
+|---|---|
+| **URL** | `DELETE /api/venues/{id}` |
+| **Mô tả** | Xóa venue (xóa kèm sections và seats thuộc venue) |
+| **Authorization** | ✅ `Bearer <token>` |
+| **Role** | 🔒 `ORGANIZER` hoặc `ADMIN` |
+| **Path Variable** | `id` — Venue ID |
+| **Request Body** | Không có |
+
+---
+
 ## 11. Seats & Sections
+
+> **Database entities:** `Section`, `Seat`, `SeatReservation`, `EventSchedule`, `Venue`
 
 ### 11.1. Tạo section (Organizer/Admin)
 
@@ -1018,13 +1101,50 @@
 |---|---|
 | **URL** | `GET /api/seats/sections/venue/{venueId}` |
 | **Mô tả** | Lấy danh sách sections của venue |
-| **Authorization** | ✅ `Bearer <token>` |
+| **Authorization** | ❌ Không cần |
 | **Path Variable** | `venueId` — Venue ID |
 | **Request Body** | Không có |
 
 ---
 
-### 11.3. Tạo ghế (Organizer/Admin)
+### 11.3. Cập nhật section (Organizer/Admin)
+
+| | |
+|---|---|
+| **URL** | `PUT /api/seats/sections/{id}` |
+| **Mô tả** | Cập nhật section trong venue |
+| **Authorization** | ✅ `Bearer <token>` |
+| **Role** | 🔒 `ORGANIZER` hoặc `ADMIN` |
+| **Path Variable** | `id` — Section ID |
+| **Header** | `Authorization: Bearer <token>`, `Content-Type: application/json` |
+
+**Request Body:** (giống Create, field nào gửi sẽ được update)
+```json
+{
+  "venueId": 1,                        // ✅ Bắt buộc
+  "name": "Khu VIP Updated",         // ❌ Không bắt buộc
+  "description": "Mô tả mới",       // ❌ Không bắt buộc
+  "capacity": 120,                     // ❌ Không bắt buộc
+  "hasNumberedSeats": true             // ❌ Không bắt buộc
+}
+```
+
+---
+
+### 11.4. Xóa section (Organizer/Admin)
+
+| | |
+|---|---|
+| **URL** | `DELETE /api/seats/sections/{id}` |
+| **Mô tả** | Xóa section (xóa kèm seats thuộc section) |
+| **Authorization** | ✅ `Bearer <token>` |
+| **Role** | 🔒 `ORGANIZER` hoặc `ADMIN` |
+| **Path Variable** | `id` — Section ID |
+| **Request Body** | Không có |
+
+---
+
+### 11.5. Tạo ghế (Organizer/Admin)
 
 | | |
 |---|---|
@@ -1049,31 +1169,58 @@
 
 ---
 
-### 11.4. Lấy ghế theo venue
+### 11.6. Tạo ghế hàng loạt (Organizer/Admin)
+
+| | |
+|---|---|
+| **URL** | `POST /api/seats/bulk` |
+| **Mô tả** | Tạo nhiều ghế theo row ranges |
+| **Authorization** | ✅ `Bearer <token>` |
+| **Role** | 🔒 `ORGANIZER` hoặc `ADMIN` |
+| **Header** | `Authorization: Bearer <token>`, `Content-Type: application/json` |
+
+**Request Body:**
+```json
+{
+  "venueId": 1,                        // ✅ Bắt buộc
+  "sectionId": 1,                      // ❌ Không bắt buộc
+  "seatType": "REGULAR",            // ❌ Không bắt buộc (mặc định)
+  "rows": [                            // ✅ Bắt buộc
+    { "rowLabel": "A", "startNumber": 1, "endNumber": 10 },
+    { "rowLabel": "B", "startNumber": 1, "endNumber": 8, "seatType": "VIP" }
+  ]
+}
+```
+
+---
+
+### 11.7. Lấy ghế theo venue
 
 | | |
 |---|---|
 | **URL** | `GET /api/seats/venue/{venueId}` |
 | **Mô tả** | Lấy tất cả ghế của venue |
-| **Authorization** | ✅ `Bearer <token>` |
+| **Authorization** | ❌ Không cần |
 | **Path Variable** | `venueId` — Venue ID |
 | **Request Body** | Không có |
 
 ---
 
-### 11.5. Lấy ghế trống theo lịch chiếu
+### 11.8. Lấy ghế trống theo lịch chiếu
 
 | | |
 |---|---|
 | **URL** | `GET /api/seats/available` |
 | **Mô tả** | Lấy danh sách ghế kèm trạng thái available/reserved theo lịch chiếu |
-| **Authorization** | ✅ `Bearer <token>` |
+| **Authorization** | ❌ Không cần |
 | **Query Param** | `scheduleId` (Long) ✅ Bắt buộc |
 | **Request Body** | Không có |
 
 ---
 
 ## 12. Promo Codes
+
+> **Database entities:** `PromoCode`, `PromoCodeEventJoin`, `TicketType`, `Event`, `User`
 
 > ⚠️ **Promo codes được phân quyền theo role:**
 > - **ADMIN:** CRUD tất cả promo codes, chỉ tạo loại `GLOBAL` (áp dụng toàn hệ thống)
@@ -1319,6 +1466,8 @@
 
 ## 13. Ticket Listings & Exchanges
 
+> **Database entities:** `TicketListing`, `TicketExchange`, `TicketTransferLog`, `Ticket`, `User`
+
 ### 13.1. Lấy danh sách rao bán vé (Public)
 
 | | |
@@ -1373,6 +1522,8 @@
 }
 ```
 
+> **Validation:** Vé phải thuộc sở hữu của user, `transferable=true`, chưa check-in, event cho phép trao đổi, và chưa có listing FOR_SALE đang hoạt động.
+
 ---
 
 ### 13.5. Hủy rao bán
@@ -1406,6 +1557,8 @@
 }
 ```
 
+> **Validation:** Listing phải ở trạng thái FOR_SALE, buyer không được là seller. Nếu `TRADE` thì phải có `tradeTicketId`, ticket đó phải thuộc buyer và chưa check-in.
+
 ---
 
 ### 13.7. Hoàn thành giao dịch trao đổi
@@ -1433,6 +1586,8 @@
 ---
 
 ## 14. Transaction Histories (Lịch sử giao dịch)
+
+> **Database entities:** `TransactionHistory`, `Payment`, `Booking`, `User`
 
 ### 14.1. Lấy lịch sử giao dịch của tôi
 
@@ -1516,6 +1671,8 @@
 ---
 
 ## 15. Organizer E-Wallet (Ví điện tử Organizer)
+
+> **Database entities:** `OrganizerEWallet`, `WalletTransaction`, `User`
 
 ### 15.1. Lấy thông tin ví (Organizer)
 
@@ -1695,7 +1852,7 @@
 
 ---
 
-## Tổng hợp nhanh (93 endpoints)
+## Tổng hợp nhanh (99 endpoints)
 
 | # | Method | URL | Auth | Role |
 |---|--------|-----|------|------|
@@ -1735,60 +1892,66 @@
 | 34 | GET | `/api/ticket-types/available?eventId=` | ❌ | — |
 | 35 | GET | `/api/ticket-types/{id}` | ❌ | — |
 | 36 | POST | `/api/ticket-types` | ✅ | ORGANIZER/ADMIN |
-| 37 | POST | `/api/bookings` | ✅ | Any |
-| 38 | DELETE | `/api/bookings/{id}` | ✅ | Any |
-| 39 | GET | `/api/bookings/my-bookings` | ✅ | Any |
-| 40 | GET | `/api/bookings/{id}` | ✅ | Any |
-| 41 | POST | `/api/payments` | ✅ | Any |
-| 42 | GET | `/api/payments/booking/{bookingId}` | ✅ | Any |
-| 43 | GET | `/api/payments/payos/{orderCode}` | ✅ | Any |
-| 44 | PUT | `/api/payments/payos/{orderCode}/cancel` | ✅ | Any |
-| 45 | POST | `/api/payments/payos/webhook` | ❌ | — |
-| 46 | GET | `/api/payments/payos/success` | ❌ | — |
-| 47 | GET | `/api/payments/payos/cancel` | ❌ | — |
-| 48 | GET | `/api/tickets/my-tickets` | ✅ | Any |
-| 49 | GET | `/api/tickets/booking/{bookingId}` | ✅ | Any |
-| 50 | GET | `/api/tickets/code/{ticketCode}` | ✅ | Any |
-| 51 | POST | `/api/tickets/check-in` | ✅ | STAFF/ORGANIZER/ADMIN |
-| 52 | GET | `/api/venues` | ❌ | — |
-| 53 | GET | `/api/venues/{id}` | ❌ | — |
-| 54 | GET | `/api/venues/search?city=` | ❌ | — |
-| 55 | POST | `/api/venues` | ✅ | ORGANIZER/ADMIN |
-| 56 | PUT | `/api/venues/{id}` | ✅ | ORGANIZER/ADMIN |
-| 57 | POST | `/api/seats/sections` | ✅ | ORGANIZER/ADMIN |
-| 58 | GET | `/api/seats/sections/venue/{venueId}` | ✅ | Any |
-| 59 | POST | `/api/seats` | ✅ | ORGANIZER/ADMIN |
-| 60 | GET | `/api/seats/venue/{venueId}` | ✅ | Any |
-| 61 | GET | `/api/seats/available?scheduleId=` | ✅ | Any |
-| 62 | POST | `/api/promo-codes/admin` | ✅ | ADMIN |
-| 63 | GET | `/api/promo-codes/admin` | ✅ | ADMIN |
-| 64 | GET | `/api/promo-codes/admin/active` | ✅ | ADMIN |
-| 65 | GET | `/api/promo-codes/admin/{id}` | ✅ | ADMIN |
-| 66 | PUT | `/api/promo-codes/admin/{id}` | ✅ | ADMIN |
-| 67 | PUT | `/api/promo-codes/admin/{id}/deactivate` | ✅ | ADMIN |
-| 68 | POST | `/api/promo-codes/organizer` | ✅ | ORGANIZER |
-| 69 | GET | `/api/promo-codes/organizer` | ✅ | ORGANIZER |
-| 70 | GET | `/api/promo-codes/organizer/{id}` | ✅ | ORGANIZER |
-| 71 | PUT | `/api/promo-codes/organizer/{id}` | ✅ | ORGANIZER |
-| 72 | PUT | `/api/promo-codes/organizer/{id}/deactivate` | ✅ | ORGANIZER |
-| 73 | POST | `/api/promo-codes/available` | ✅ | Any (đã đăng nhập) |
-| 74 | GET | `/api/ticket-listings` | ❌ | — |
-| 75 | GET | `/api/ticket-listings/{id}` | ❌ | — |
-| 76 | GET | `/api/ticket-listings/my-listings` | ✅ | Any |
-| 77 | POST | `/api/ticket-listings` | ✅ | Any |
-| 78 | DELETE | `/api/ticket-listings/{id}` | ✅ | Any |
-| 79 | POST | `/api/ticket-listings/exchanges` | ✅ | Any |
-| 80 | PUT | `/api/ticket-listings/exchanges/{id}/complete` | ✅ | Any |
-| 81 | DELETE | `/api/ticket-listings/exchanges/{id}` | ✅ | Any |
-| 82 | GET | `/api/transaction-histories/my-transactions` | ✅ | Any |
-| 83 | GET | `/api/transaction-histories/booking/{bookingId}` | ✅ | Any |
-| 84 | GET | `/api/transaction-histories/payment/{paymentId}` | ✅ | Any |
-| 85 | GET | `/api/transaction-histories/admin` | ✅ | ADMIN |
-| 86 | GET | `/api/transaction-histories/admin/user/{userId}` | ✅ | ADMIN |
-| 87 | GET | `/api/organizer/wallet` | ✅ | ORGANIZER/ADMIN |
-| 88 | PUT | `/api/organizer/wallet/bank-info` | ✅ | ORGANIZER/ADMIN |
-| 89 | POST | `/api/organizer/wallet/withdraw` | ✅ | ORGANIZER/ADMIN |
-| 90 | GET | `/api/organizer/wallet/transactions` | ✅ | ORGANIZER/ADMIN |
-| 91 | GET | `/api/organizer/wallet/admin/all` | ✅ | ADMIN |
-| 92 | GET | `/api/organizer/wallet/admin/user/{userId}` | ✅ | ADMIN |
-| 93 | GET | `/api/organizer/wallet/admin/user/{userId}/transactions` | ✅ | ADMIN |
+| 37 | PUT | `/api/ticket-types/{id}` | ✅ | ORGANIZER/ADMIN |
+| 38 | DELETE | `/api/ticket-types/{id}` | ✅ | ORGANIZER/ADMIN |
+| 39 | POST | `/api/bookings` | ✅ | Any |
+| 40 | DELETE | `/api/bookings/{id}` | ✅ | Any |
+| 41 | GET | `/api/bookings/my-bookings` | ✅ | Any |
+| 42 | GET | `/api/bookings/{id}` | ✅ | Any |
+| 43 | POST | `/api/payments` | ✅ | Any |
+| 44 | GET | `/api/payments/booking/{bookingId}` | ✅ | Any |
+| 45 | GET | `/api/payments/payos/{orderCode}` | ✅ | Any |
+| 46 | PUT | `/api/payments/payos/{orderCode}/cancel` | ✅ | Any |
+| 47 | POST | `/api/payments/payos/webhook` | ❌ | — |
+| 48 | GET | `/api/payments/payos/success` | ❌ | — |
+| 49 | GET | `/api/payments/payos/cancel` | ❌ | — |
+| 50 | GET | `/api/tickets/my-tickets` | ✅ | Any |
+| 51 | GET | `/api/tickets/booking/{bookingId}` | ✅ | Any |
+| 52 | GET | `/api/tickets/code/{ticketCode}` | ✅ | Any |
+| 53 | POST | `/api/tickets/check-in` | ✅ | STAFF/ORGANIZER/ADMIN |
+| 54 | GET | `/api/venues` | ❌ | — |
+| 55 | GET | `/api/venues/{id}` | ❌ | — |
+| 56 | GET | `/api/venues/search?city=` | ❌ | — |
+| 57 | POST | `/api/venues` | ✅ | ORGANIZER/ADMIN |
+| 58 | PUT | `/api/venues/{id}` | ✅ | ORGANIZER/ADMIN |
+| 59 | DELETE | `/api/venues/{id}` | ✅ | ORGANIZER/ADMIN |
+| 60 | POST | `/api/seats/sections` | ✅ | ORGANIZER/ADMIN |
+| 61 | GET | `/api/seats/sections/venue/{venueId}` | ❌ | — |
+| 62 | PUT | `/api/seats/sections/{id}` | ✅ | ORGANIZER/ADMIN |
+| 63 | DELETE | `/api/seats/sections/{id}` | ✅ | ORGANIZER/ADMIN |
+| 64 | POST | `/api/seats` | ✅ | ORGANIZER/ADMIN |
+| 65 | POST | `/api/seats/bulk` | ✅ | ORGANIZER/ADMIN |
+| 66 | GET | `/api/seats/venue/{venueId}` | ❌ | — |
+| 67 | GET | `/api/seats/available?scheduleId=` | ❌ | — |
+| 68 | POST | `/api/promo-codes/admin` | ✅ | ADMIN |
+| 69 | GET | `/api/promo-codes/admin` | ✅ | ADMIN |
+| 70 | GET | `/api/promo-codes/admin/active` | ✅ | ADMIN |
+| 71 | GET | `/api/promo-codes/admin/{id}` | ✅ | ADMIN |
+| 72 | PUT | `/api/promo-codes/admin/{id}` | ✅ | ADMIN |
+| 73 | PUT | `/api/promo-codes/admin/{id}/deactivate` | ✅ | ADMIN |
+| 74 | POST | `/api/promo-codes/organizer` | ✅ | ORGANIZER |
+| 75 | GET | `/api/promo-codes/organizer` | ✅ | ORGANIZER |
+| 76 | GET | `/api/promo-codes/organizer/{id}` | ✅ | ORGANIZER |
+| 77 | PUT | `/api/promo-codes/organizer/{id}` | ✅ | ORGANIZER |
+| 78 | PUT | `/api/promo-codes/organizer/{id}/deactivate` | ✅ | ORGANIZER |
+| 79 | POST | `/api/promo-codes/available` | ✅ | Any (đã đăng nhập) |
+| 80 | GET | `/api/ticket-listings` | ❌ | — |
+| 81 | GET | `/api/ticket-listings/{id}` | ❌ | — |
+| 82 | GET | `/api/ticket-listings/my-listings` | ✅ | Any |
+| 83 | POST | `/api/ticket-listings` | ✅ | Any |
+| 84 | DELETE | `/api/ticket-listings/{id}` | ✅ | Any |
+| 85 | POST | `/api/ticket-listings/exchanges` | ✅ | Any |
+| 86 | PUT | `/api/ticket-listings/exchanges/{id}/complete` | ✅ | Any |
+| 87 | DELETE | `/api/ticket-listings/exchanges/{id}` | ✅ | Any |
+| 88 | GET | `/api/transaction-histories/my-transactions` | ✅ | Any |
+| 89 | GET | `/api/transaction-histories/booking/{bookingId}` | ✅ | Any |
+| 90 | GET | `/api/transaction-histories/payment/{paymentId}` | ✅ | Any |
+| 91 | GET | `/api/transaction-histories/admin` | ✅ | ADMIN |
+| 92 | GET | `/api/transaction-histories/admin/user/{userId}` | ✅ | ADMIN |
+| 93 | GET | `/api/organizer/wallet` | ✅ | ORGANIZER/ADMIN |
+| 94 | PUT | `/api/organizer/wallet/bank-info` | ✅ | ORGANIZER/ADMIN |
+| 95 | POST | `/api/organizer/wallet/withdraw` | ✅ | ORGANIZER/ADMIN |
+| 96 | GET | `/api/organizer/wallet/transactions` | ✅ | ORGANIZER/ADMIN |
+| 97 | GET | `/api/organizer/wallet/admin/all` | ✅ | ADMIN |
+| 98 | GET | `/api/organizer/wallet/admin/user/{userId}` | ✅ | ADMIN |
+| 99 | GET | `/api/organizer/wallet/admin/user/{userId}/transactions` | ✅ | ADMIN |
