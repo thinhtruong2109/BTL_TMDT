@@ -1,27 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Container,
-  Grid,
-  Paper,
-  Typography,
-  Box,
-  Button,
-  Chip,
-  Divider,
-} from '@mui/material';
-import { ShoppingCart, SwapHoriz } from '@mui/icons-material';
+import { toast } from 'react-toastify';
+import { ShoppingCart, RefreshCw, Ticket as TicketIcon } from 'lucide-react';
 import { ticketListingApi } from '../../api';
-import { LoadingScreen, ErrorAlert, EmptyState, PageHeader } from '../../components/common';
-import { formatCurrency, getErrorMessage } from '../../utils/helpers';
 import { useAuth } from '../../contexts/AuthContext';
+
+import logo from '../../assets/images/logo.png';
 
 const MarketplacePage = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
   useEffect(() => {
     fetchListings();
@@ -33,7 +23,8 @@ const MarketplacePage = () => {
       const res = await ticketListingApi.getAll();
       setListings(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      setError(getErrorMessage(err));
+      const errorMsg = err.response?.data?.message || "Lỗi tải danh sách chợ vé!";
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -41,93 +32,103 @@ const MarketplacePage = () => {
 
   const handleBuy = (listingId) => {
     if (!isAuthenticated) {
-      navigate('/login', { state: { from: { pathname: '/marketplace' } } });
+      toast.info("Vui lòng đăng nhập để tiếp tục!");
+      navigate('/login');
       return;
     }
     navigate(`/marketplace/${listingId}`);
   };
 
+  const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
+
   return (
-    <>
-      <PageHeader
-        title="Marketplace"
-        subtitle="Buy and trade tickets from other users"
-        action={
-          isAuthenticated && (
-            <Button
-              variant="outlined"
+    <div className="min-h-screen bg-[#D9D9D9] font-montserrat flex flex-col">
+      <main className="flex-grow max-w-[1440px] w-full mx-auto px-5 md:px-[122px] py-10 animate-fade-in">
+        
+        {/* HEADER */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 uppercase tracking-tight mb-2">
+              Chợ Vé TickeZ
+            </h1>
+            <p className="text-gray-600 font-medium">Mua bán và trao đổi vé an toàn cùng cộng đồng</p>
+          </div>
+          {isAuthenticated && (
+            <button
               onClick={() => navigate('/marketplace/my-listings')}
-              sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.3)', '&:hover': { borderColor: 'rgba(255,255,255,0.5)' } }}
+              className="bg-gray-900 hover:bg-black text-white font-bold py-3 px-6 rounded-xl transition-colors shadow-lg"
             >
-              My Listings
-            </Button>
-          )
-        }
-      />
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        {error && <ErrorAlert message={error} onRetry={fetchListings} />}
+              Vé bạn đang đăng bán
+            </button>
+          )}
+        </div>
 
+        {/* LISTINGS */}
         {loading ? (
-          <LoadingScreen />
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
         ) : listings.length === 0 ? (
-          <EmptyState
-            title="No listings available"
-            description="There are no tickets available for sale or trade right now"
-          />
+          <div className="bg-white rounded-2xl shadow-lg flex flex-col items-center justify-center gap-4 py-20 px-4">
+            <img className="w-48 opacity-50 drop-shadow-md mb-2" src={logo} alt="Empty" />
+            <h3 className="text-xl font-bold text-gray-800">Chợ vé đang trống</h3>
+            <p className="text-gray-500 font-medium">Hiện tại chưa có vé nào được đăng bán hoặc trao đổi.</p>
+          </div>
         ) : (
-          <Grid container spacing={3}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {listings.map((listing) => (
-              <Grid item xs={12} sm={6} md={4} key={listing.id}>
-                <Paper sx={{ p: 0, overflow: 'hidden' }}>
-                  <Box sx={{ p: 2.5 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography variant="subtitle2" fontWeight={600}>
-                        {listing.eventName || 'Event Ticket'}
-                      </Typography>
-                      <Chip
-                        label={listing.exchangeType}
-                        size="small"
-                        variant="outlined"
-                        icon={listing.exchangeType === 'TRADE' ? <SwapHoriz /> : undefined}
-                      />
-                    </Box>
-                    {listing.ticketTypeName && (
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                        {listing.ticketTypeName}
-                      </Typography>
-                    )}
-                    {listing.description && (
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        {listing.description}
-                      </Typography>
-                    )}
+              <div key={listing.id} className="bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col border border-gray-100 hover:-translate-y-1 hover:shadow-xl transition-all duration-300 p-5">
+                
+                <div className="flex justify-between items-start mb-3 gap-2">
+                  <h3 className="font-bold text-lg text-gray-900 line-clamp-2 leading-tight">
+                    {listing.eventName || 'Vé sự kiện'}
+                  </h3>
+                  <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full whitespace-nowrap uppercase flex items-center gap-1 border ${
+                    listing.exchangeType === 'TRADE' ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-green-50 text-green-600 border-green-200'
+                  }`}>
+                    {listing.exchangeType === 'TRADE' ? <RefreshCw className="w-3 h-3" /> : null}
+                    {listing.exchangeType === 'TRADE' ? 'Trao đổi' : 'Bán lại'}
+                  </span>
+                </div>
+                
+                {listing.ticketTypeName && (
+                  <p className="text-sm font-bold text-primary mb-1 flex items-center gap-1.5">
+                    <TicketIcon className="w-4 h-4" /> {listing.ticketTypeName}
+                  </p>
+                )}
+                
+                {listing.description && (
+                  <p className="text-sm text-gray-500 font-medium line-clamp-2 mb-4 h-10">
+                    "{listing.description}"
+                  </p>
+                )}
 
-                    <Divider sx={{ my: 1.5 }} />
+                <div className="h-px bg-gray-200 w-full my-4" />
 
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Box>
-                        <Typography variant="caption" color="text.secondary">Price</Typography>
-                        <Typography variant="h6" fontWeight={700}>
-                          {formatCurrency(listing.listingPrice)}
-                        </Typography>
-                      </Box>
-                      <Button
-                        variant="contained"
-                        size="small"
-                        startIcon={<ShoppingCart />}
-                        onClick={() => handleBuy(listing.id)}
-                      >
-                        {listing.exchangeType === 'TRADE' ? 'Trade' : 'Buy'}
-                      </Button>
-                    </Box>
-                  </Box>
-                </Paper>
-              </Grid>
+                <div className="mt-auto flex justify-between items-center">
+                  <div>
+                    <p className="text-xs text-gray-500 font-bold uppercase mb-0.5">Mức giá</p>
+                    <p className="text-xl font-extrabold text-gray-900">
+                      {formatCurrency(listing.listingPrice)}
+                    </p>
+                  </div>
+                  
+                  <button
+                    onClick={() => handleBuy(listing.id)}
+                    className={`flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg font-bold text-white transition-colors shadow-md ${
+                      listing.exchangeType === 'TRADE' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-primary hover:bg-red-600'
+                    }`}
+                  >
+                    {listing.exchangeType === 'TRADE' ? 'Đổi vé' : 'Mua ngay'}
+                  </button>
+                </div>
+              </div>
             ))}
-          </Grid>
+          </div>
         )}
-      </Container>
-    </>
+      </main>
+
+    </div>
   );
 };
 

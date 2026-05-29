@@ -1,189 +1,209 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Container,
-  Grid,
-  Typography,
-  Box,
-  Button,
-  Chip,
-  Card,
-  CardContent,
-  CardMedia,
-  Paper,
-} from '@mui/material';
-import {
-  Search,
-  ConfirmationNumber,
-  TrendingUp,
-  Security,
-  ArrowForward,
-} from '@mui/icons-material';
+import { Store, RefreshCw, ShieldCheck } from 'lucide-react'; // Import icon cho Marketplace
+
+// UI Components
+import Footer from '../components/Footer';
+import HeaderBar from '../components/HeaderBar';
+import CatalogBar from '../components/CatalogBar';
+import HeroBanner from '../components/HeroBanner';
+import ListEvent from '../components/ListEvent';
+import AdvertisingBanner from '../components/AdvertisingBanner';
+import Loader from '../components/TicketLoader';
+
+// APIs
 import { eventApi, categoryApi } from '../api';
-import EventCard from '../components/events/EventCard';
-import { LoadingScreen } from '../components/common';
+
+// Assets
+import defaultImage from '../assets/images/default_img.png';
+import bgImage from '../assets/images/bg.jpg';
 
 const HomePage = () => {
   const navigate = useNavigate();
+
+  // State
   const [events, setEvents] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Logic fetch dữ liệu
   useEffect(() => {
-    const load = async () => {
+    const loadData = async () => {
       try {
         const [evRes, catRes] = await Promise.all([
           eventApi.getPublishedEvents(),
           categoryApi.getAll(),
         ]);
-        setEvents(Array.isArray(evRes.data) ? evRes.data.slice(0, 6) : (evRes.data.content ? evRes.data.content.slice(0, 6) : []));
+
+        // Trích xuất data an toàn
+        const rawEvents = Array.isArray(evRes.data)
+          ? evRes.data
+          : evRes.data?.content
+          ? evRes.data.content
+          : [];
+
+        // Map data để tương thích với prop của component <ListEvent />
+        const mappedEvents = rawEvents.map((evt) => ({
+          id: evt.id,
+          title: evt.name,
+          src: evt.bannerImageUrl || evt.event_banner_url || evt.event_picture || defaultImage,
+          alt: evt.name,
+          date: evt.eventTime,
+          picture: evt.bannerImageUrl || evt.event_picture_url || evt.event_picture || defaultImage,
+          categoryId: evt.categoryId || evt.category?.id,
+          ...evt,
+        }));
+
+        setEvents(mappedEvents);
         setCategories(Array.isArray(catRes.data) ? catRes.data : []);
-      } catch {
-        /* silent */
+      } catch (error) {
+        console.error('Lỗi tải dữ liệu:', error);
       } finally {
         setLoading(false);
       }
     };
-    load();
+
+    loadData();
   }, []);
 
-  const features = [
-    { icon: <Search sx={{ fontSize: 40 }} />, title: 'Discover Events', desc: 'Browse thousands of events near you — concerts, sports, theatre and more.' },
-    { icon: <ConfirmationNumber sx={{ fontSize: 40 }} />, title: 'Instant E-Tickets', desc: 'Get your e-tickets instantly after booking. No printing needed.' },
-    { icon: <TrendingUp sx={{ fontSize: 40 }} />, title: 'Ticket Marketplace', desc: 'Buy, sell or trade tickets safely with other fans through our marketplace.' },
-    { icon: <Security sx={{ fontSize: 40 }} />, title: 'Secure Payments', desc: 'Pay with confidence via VNPay, MoMo or Stripe with full buyer protection.' },
-  ];
+  // Bộ lọc sự kiện sắp diễn ra
+  const upcomingEvents = useMemo(() => {
+    const now = new Date();
+    return events
+      .filter((evt) => evt.eventTime && new Date(evt.eventTime) > now)
+      .sort((a, b) => new Date(a.eventTime) - new Date(b.eventTime));
+  }, [events]);
 
-  if (loading) return <LoadingScreen />;
+  if (loading) {
+    return <Loader text="Đang tải sự kiện..." height="100vh" />;
+  }
 
   return (
-    <>
-      {/* Hero */}
-      <Box sx={{
-        bgcolor: '#111827',
-        color: '#fff',
-        py: { xs: 8, md: 12 },
-        textAlign: 'center',
-        position: 'relative',
-        overflow: 'hidden',
-      }}>
-        <Box sx={{
-          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'radial-gradient(circle at 50% 0%, rgba(99,102,241,0.15), transparent 70%)',
-        }} />
-        <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
-          <Typography variant="h2" fontWeight={800} sx={{ mb: 2, fontSize: { xs: '2rem', md: '3rem' }, color: '#fff' }}>
-            Your Next Experience
-            <br />
-            <Box component="span" sx={{ color: '#818cf8' }}>Starts Here</Box>
-          </Typography>
-          <Typography variant="h6" sx={{ color: '#9ca3af', mb: 4, fontWeight: 400, maxWidth: 600, mx: 'auto' }}>
-            Discover, book, and manage tickets for the events you love. Fast, secure, and hassle-free.
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Button
-              variant="contained"
-              size="large"
-              endIcon={<ArrowForward />}
-              onClick={() => navigate('/events')}
-              sx={{ px: 4, py: 1.5, fontSize: '1rem', bgcolor: '#6366f1', '&:hover': { bgcolor: '#4f46e5' } }}
+    <div className="bg-home relative min-h-screen isolate font-montserrat">
+      {/* Lớp nền ảnh mờ */}
+      <div
+        className="fixed inset-0 -z-20 w-full h-full"
+        style={{
+          backgroundImage: `url(${bgImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          filter: 'blur(3px)',
+        }}
+      ></div>
+
+      <div className="fixed inset-0 bg-black/30 -z-10"></div>
+
+      <div className="relative z-10 flex flex-col min-h-screen">
+        <HeaderBar />
+        
+        <CatalogBar categories={categories} />
+
+        <HeroBanner />
+
+
+        {/* SỰ KIỆN NỔI BẬT */}
+        {upcomingEvents.length > 0 && (
+          <ListEvent
+            title="SỰ KIỆN NỔI BẬT"
+            events={upcomingEvents.slice(0, 15)}
+            imageWidth="260px"
+            imageHeight="350px"
+            gap={30}
+          />
+        )}
+
+        {/* SỰ KIỆN TRENDING */}
+        {events.length > 0 && (
+          <ListEvent
+            title="SỰ KIỆN TRENDING"
+            events={events.slice(0, 10)}
+            imageWidth="380px"
+            imageHeight="160px"
+            gap={30}
+          />
+        )}
+
+        {/* CÁC DANH MỤC SỰ KIỆN */}
+        {categories.length > 0 ? (
+          categories.map((cat, index) => {
+            const catEvents = events.filter(e => String(e.categoryId) === String(cat.id));
+            if (catEvents.length === 0) return null;
+
+            return (
+              <React.Fragment key={cat.id || index}>
+                {index === 1 && (
+                  <AdvertisingBanner
+                    banner="https://techcombank.com/content/dam/techcombank/public-site/articles/non-blog/Banner-cashback-ther-VISA-c6315ae326.jpg"
+                    height={500}
+                  />
+                )}
+                <ListEvent
+                  title={cat.name.toUpperCase()}
+                  events={catEvents} 
+                  imageWidth="350px"
+                  imageHeight="200px"
+                  gap={30}
+                />
+              </React.Fragment>
+            );
+          })
+        ) : (
+          <>
+            <ListEvent title="CONCERT GÌ NÀO ?" events={events} imageWidth="350px" imageHeight="200px" gap={30} />
+            <AdvertisingBanner
+              banner="https://techcombank.com/content/dam/techcombank/public-site/articles/non-blog/Banner-cashback-ther-VISA-c6315ae326.jpg"
+              height={500}
+            />
+            <ListEvent title="NGHỆ THUẬT VÀ SÂN KHẤU" events={events} imageWidth="350px" imageHeight="200px" gap={30} />
+            <ListEvent title="THỂ THAO" events={events} imageWidth="350px" imageHeight="200px" gap={30} />
+          </>
+        )}
+
+        {/* SECTION MARKETPLACE - 3 CỘT */}
+        <div className="max-w-[1440px] mx-auto px-5 md:px-[122px] pt-12 pb-4 w-full">
+          <div className="flex items-center gap-2 mb-6">
+            <div className="w-1.5 h-6 bg-primary rounded-full" />
+            <h2 className="font-extrabold text-white text-xl uppercase drop-shadow-md">
+              Chợ vé TickeZ - Mua bán an toàn
+            </h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Box 1: Mua vé an toàn */}
+            <div 
+              onClick={() => navigate('/marketplace')} 
+              className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl hover:-translate-y-2 transition-all cursor-pointer border border-white/50 group"
             >
-              Browse Events
-            </Button>
-            <Button
-              variant="outlined"
-              size="large"
-              onClick={() => navigate('/marketplace')}
-              sx={{ px: 4, py: 1.5, fontSize: '1rem', color: '#fff', borderColor: 'rgba(255,255,255,0.3)', '&:hover': { borderColor: '#fff', bgcolor: 'rgba(255,255,255,0.05)' } }}
+               <ShieldCheck className="w-12 h-12 text-primary mb-4 group-hover:scale-110 transition-transform" />
+               <h3 className="text-xl font-bold text-gray-900 mb-2 uppercase">Mua vé an toàn</h3>
+               <p className="text-gray-600 font-medium text-sm">Không lo lừa đảo. Tìm mua vé từ những người dùng khác với hệ thống bảo mật tuyệt đối của TickeZ.</p>
+            </div>
+
+            {/* Box 2: Pass vé dễ dàng */}
+            <div 
+              onClick={() => navigate('/marketplace/my-listings')} 
+              className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl hover:-translate-y-2 transition-all cursor-pointer border border-white/50 group"
             >
-              Marketplace
-            </Button>
-          </Box>
-        </Container>
-      </Box>
+               <Store className="w-12 h-12 text-primary mb-4 group-hover:scale-110 transition-transform" />
+               <h3 className="text-xl font-bold text-gray-900 mb-2 uppercase">Nhượng vé dễ dàng</h3>
+               <p className="text-gray-600 font-medium text-sm">Lỡ lịch không thể tham gia? Nhượng lại chiếc vé của bạn cho người đang cần chỉ với vài thao tác.</p>
+            </div>
 
-      {/* Categories */}
-      {categories.length > 0 && (
-        <Container maxWidth="lg" sx={{ py: 6 }}>
-          <Typography variant="h5" fontWeight={700} gutterBottom>Browse by Category</Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-            Find events that match your interests
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-            {categories.map((cat) => (
-              <Chip
-                key={cat.id}
-                label={cat.name}
-                onClick={() => navigate(`/events?category=${cat.id}`)}
-                variant="outlined"
-                sx={{ fontSize: '0.9rem', py: 2.5, px: 1, borderRadius: 2, cursor: 'pointer', '&:hover': { bgcolor: '#111827', color: '#fff', borderColor: '#111827' } }}
-              />
-            ))}
-          </Box>
-        </Container>
-      )}
-
-      {/* Featured Events */}
-      {events.length > 0 && (
-        <Box sx={{ bgcolor: '#f8f9fa', py: 6 }}>
-          <Container maxWidth="lg">
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-              <Box>
-                <Typography variant="h5" fontWeight={700}>Featured Events</Typography>
-                <Typography variant="body1" color="text.secondary">Don't miss out on these popular events</Typography>
-              </Box>
-              <Button endIcon={<ArrowForward />} onClick={() => navigate('/events')}>View All</Button>
-            </Box>
-            <Grid container spacing={3}>
-              {events.map((event) => (
-                <Grid item xs={12} sm={6} md={4} key={event.id}>
-                  <EventCard event={event} />
-                </Grid>
-              ))}
-            </Grid>
-          </Container>
-        </Box>
-      )}
-
-      {/* Features */}
-      <Container maxWidth="lg" sx={{ py: 8 }}>
-        <Box sx={{ textAlign: 'center', mb: 5 }}>
-          <Typography variant="h5" fontWeight={700}>Why Choose Alo Vé?</Typography>
-          <Typography variant="body1" color="text.secondary">
-            Everything you need for a seamless event experience
-          </Typography>
-        </Box>
-        <Grid container spacing={4}>
-          {features.map((f, i) => (
-            <Grid item xs={12} sm={6} md={3} key={i}>
-              <Paper sx={{ p: 3, textAlign: 'center', height: '100%', bgcolor: 'transparent', boxShadow: 'none', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
-                <Box sx={{ color: '#111827', mb: 2 }}>{f.icon}</Box>
-                <Typography variant="subtitle1" fontWeight={700} gutterBottom>{f.title}</Typography>
-                <Typography variant="body2" color="text.secondary">{f.desc}</Typography>
-              </Paper>
-            </Grid>
-          ))}
-        </Grid>
-      </Container>
-
-      {/* CTA */}
-      <Box sx={{ bgcolor: '#111827', color: '#fff', py: 8, textAlign: 'center' }}>
-        <Container maxWidth="sm">
-          <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>Ready to Get Started?</Typography>
-          <Typography variant="body1" sx={{ color: '#9ca3af', mb: 3 }}>
-            Join thousands of event-goers and organizers on Alo Vé.
-          </Typography>
-          <Button
-            variant="contained"
-            size="large"
-            onClick={() => navigate('/register')}
-            sx={{ px: 5, py: 1.5, bgcolor: '#6366f1', '&:hover': { bgcolor: '#4f46e5' } }}
-          >
-            Create Free Account
-          </Button>
-        </Container>
-      </Box>
-    </>
+            {/* Box 3: Trao đổi linh hoạt */}
+            <div 
+              onClick={() => navigate('/marketplace')} 
+              className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl hover:-translate-y-2 transition-all cursor-pointer border border-white/50 group"
+            >
+               <RefreshCw className="w-12 h-12 text-primary mb-4 group-hover:scale-110 transition-transform" />
+               <h3 className="text-xl font-bold text-gray-900 mb-2 uppercase">Trao đổi vé</h3>
+               <p className="text-gray-600 font-medium text-sm">Giao dịch, đổi lấy hạng vé xịn hơn hoặc đổi ngày xem mà bạn mong muốn một cách hoàn toàn linh hoạt.</p>
+            </div>
+          </div>
+        </div>
+        
+        <Footer />
+      </div>
+    </div>
   );
 };
 

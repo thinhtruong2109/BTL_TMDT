@@ -1,24 +1,28 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Box, TextField, Button, Typography, Alert, Paper, Link } from '@mui/material';
-import { authApi } from '../../api';
-import { getErrorMessage } from '../../utils/helpers';
+import { toast } from 'react-toastify';
+
+// Lấy authApi từ file api của bạn (Hãy kiểm tra lại đường dẫn import cho đúng với máy bạn)
+import { authApi } from '../../api'; 
+
+import logo from "../../assets/images/logo.png";
 
 const VerifyEmailPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  // Lấy email được truyền sang từ trang Đăng ký (RegisterModal) hoặc Đăng nhập (LoginModal)
   const email = location.state?.email || '';
 
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const inputRefs = useRef([]);
 
+  // Nếu truy cập thẳng vào /verify-email mà không có email, đẩy về trang chủ
   useEffect(() => {
     if (!email) {
-      navigate('/register');
+      navigate('/');
+      toast.info("Vui lòng đăng nhập hoặc đăng ký trước.");
     }
   }, [email, navigate]);
 
@@ -28,12 +32,14 @@ const VerifyEmailPage = () => {
     newOtp[index] = value;
     setOtp(newOtp);
 
+    // Tự động nhảy sang ô tiếp theo
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
   };
 
   const handleKeyDown = (index, e) => {
+    // Xóa lùi tự động nhảy về ô trước đó
     if (e.key === 'Backspace' && !otp[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
@@ -55,18 +61,20 @@ const VerifyEmailPage = () => {
   const handleVerify = async () => {
     const otpCode = otp.join('');
     if (otpCode.length !== 6) {
-      setError('Please enter all 6 digits');
+      toast.warning('Vui lòng nhập đủ 6 số OTP');
       return;
     }
 
-    setError('');
     setLoading(true);
     try {
       await authApi.verifyEmail({ email, otp: otpCode });
-      setSuccess('Email verified successfully! Redirecting...');
+      toast.success('Xác thực email thành công! Vui lòng đăng nhập lại.');
+      
+      // Chuyển hướng về trang chủ và có thể tự động mở Modal Đăng nhập (tùy logic của bạn)
       setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
-      setError(getErrorMessage(err));
+      const errorMsg = err.response?.data?.message || err.message || "Mã OTP không hợp lệ hoặc đã hết hạn!";
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -74,112 +82,83 @@ const VerifyEmailPage = () => {
 
   const handleResend = async () => {
     setResending(true);
-    setError('');
     try {
       await authApi.resendOtp({ email });
-      setSuccess('New OTP sent to your email');
+      toast.success('Mã OTP mới đã được gửi đến email của bạn');
       setOtp(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
     } catch (err) {
-      setError(getErrorMessage(err));
+      const errorMsg = err.response?.data?.message || "Không thể gửi lại mã lúc này!";
+      toast.error(errorMsg);
     } finally {
       setResending(false);
     }
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        bgcolor: 'background.default',
-        p: 2,
-      }}
-    >
-      <Paper sx={{ maxWidth: 440, width: '100%', p: { xs: 3, sm: 5 }, textAlign: 'center' }}>
-        <Box
-          component="img"
-          src={`${import.meta.env.BASE_URL}APPICON.png`}
-          alt="Alo Vé"
-          sx={{ height: 45, width: 'auto', mb: 1.5 }}
-        />
-        <Typography variant="overline" color="text.secondary" display="block" sx={{ mb: 3 }}>
-          Email Verification
-        </Typography>
+    <div className="min-h-screen bg-[#D9D9D9] flex items-center justify-center p-4 font-montserrat">
+      <div className="bg-white rounded-3xl shadow-xl max-w-lg w-full p-10 flex flex-col items-center animate-fade-in">
+        
+        {/* LOGO (Bọc trong nền cam để nổi bật chữ trắng) */}
+        <div className="bg-primary p-3 rounded-xl mb-6 shadow-md cursor-pointer" onClick={() => navigate('/')}>
+            <img src={logo} alt="TickeZ" className="h-8 w-auto" />
+        </div>
+        
+        <h2 className="text-2xl font-extrabold uppercase text-gray-900 mb-2">Xác thực Email</h2>
+        <p className="text-center text-gray-600 font-medium mb-6">
+          Chúng tôi đã gửi mã xác nhận 6 số đến <br/>
+          <span className="font-bold text-black">{email}</span>
+        </p>
 
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          We sent a 6-digit verification code to
-        </Typography>
-        <Typography variant="body1" fontWeight={600} sx={{ mb: 3 }}>
-          {email}
-        </Typography>
-
-        {error && <Alert severity="error" sx={{ mb: 2, textAlign: 'left' }}>{error}</Alert>}
-        {success && <Alert severity="success" sx={{ mb: 2, textAlign: 'left' }}>{success}</Alert>}
-
-        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', mb: 3 }} onPaste={handlePaste}>
+        {/* CÁC Ô NHẬP OTP */}
+        <div className="flex gap-2 sm:gap-3 justify-center mb-6" onPaste={handlePaste}>
           {otp.map((digit, idx) => (
-            <TextField
+            <input
               key={idx}
-              inputRef={(el) => (inputRefs.current[idx] = el)}
+              ref={(el) => (inputRefs.current[idx] = el)}
+              type="text"
+              maxLength={1}
               value={digit}
               onChange={(e) => handleChange(idx, e.target.value.replace(/\D/g, ''))}
               onKeyDown={(e) => handleKeyDown(idx, e)}
-              inputProps={{
-                maxLength: 1,
-                style: {
-                  textAlign: 'center',
-                  fontSize: '1.5rem',
-                  fontWeight: 700,
-                  fontFamily: 'monospace',
-                  padding: '12px 0',
-                  width: 40,
-                },
-              }}
-              variant="outlined"
+              className="w-12 h-14 sm:w-14 sm:h-16 text-center text-2xl font-bold border-2 border-gray-300 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
             />
           ))}
-        </Box>
+        </div>
 
-        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 3 }}>
-          Code expires in <strong>5 minutes</strong>
-        </Typography>
+        <p className="text-sm text-gray-500 font-medium mb-6">
+          Mã xác nhận hết hạn sau <span className="font-bold text-gray-800">5 phút</span>
+        </p>
 
-        <Button
-          variant="contained"
-          fullWidth
-          size="large"
+        {/* NÚT XÁC NHẬN */}
+        <button
           onClick={handleVerify}
           disabled={loading || otp.some((d) => !d)}
-          sx={{ py: 1.5, mb: 2 }}
+          className="w-full h-12 bg-primary hover:bg-red-600 text-white font-bold rounded-lg disabled:opacity-50 transition-colors uppercase tracking-wide mb-4 shadow-lg shadow-primary/30"
         >
-          {loading ? 'Verifying...' : 'Verify Email'}
-        </Button>
+          {loading ? 'Đang xác thực...' : 'Xác nhận Email'}
+        </button>
 
-        <Typography variant="body2" color="text.secondary">
-          Didn&apos;t receive the code?{' '}
-          <Link
-            component="button"
-            variant="body2"
-            fontWeight={600}
+        <p className="text-gray-600 font-medium text-sm">
+          Bạn chưa nhận được mã?{' '}
+          <button
             onClick={handleResend}
             disabled={resending}
-            sx={{ color: 'text.primary' }}
+            className="text-primary font-bold hover:underline disabled:opacity-50"
           >
-            {resending ? 'Sending...' : 'Resend'}
-          </Link>
-        </Typography>
+            {resending ? 'Đang gửi...' : 'Gửi lại mã'}
+          </button>
+        </p>
 
-        <Box sx={{ mt: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="caption" color="text.secondary">
-            <strong style={{ color: '#374151' }}>Security notice:</strong> Never share this code. E-Ticket staff will
-            never ask for your verification code.
-          </Typography>
-        </Box>
-      </Paper>
-    </Box>
+        {/* GHI CHÚ BẢO MẬT */}
+        <div className="mt-8 w-full bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <p className="text-xs text-gray-500 leading-relaxed text-center">
+            <span className="font-bold text-gray-700">Lưu ý bảo mật:</span> Tuyệt đối không chia sẻ mã này cho bất kỳ ai. Nhân viên TickeZ. sẽ không bao giờ yêu cầu bạn cung cấp mã xác nhận.
+          </p>
+        </div>
+
+      </div>
+    </div>
   );
 };
 
