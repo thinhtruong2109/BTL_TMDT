@@ -16,10 +16,9 @@ const NotFoundPage = () => {
           justifyContent: 'center',
           textAlign: 'center',
           py: 8,
-          fontFamily: 'Montserrat, sans-serif', // Đồng bộ với font Montserrat của TickeZ
+          fontFamily: 'Montserrat, sans-serif',
         }}
       >
-        {/* Vùng chứa Icon cách điệu */}
         <Box
           sx={{
             width: 120,
@@ -28,7 +27,7 @@ const NotFoundPage = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: 'rgba(239, 68, 68, 0.1)', // Màu nền đỏ nhạt của TickeZ
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
             mb: 4,
           }}
         >
@@ -40,7 +39,7 @@ const NotFoundPage = () => {
           sx={{
             fontWeight: 900,
             fontSize: { xs: '4.5rem', md: '5.5rem' },
-            color: 'error.main', // Đồng bộ màu đỏ TickeZ
+            color: 'error.main', 
             lineHeight: 1,
             mb: 1,
           }}
@@ -75,17 +74,16 @@ const NotFoundPage = () => {
           Vui lòng kiểm tra lại URL hoặc quay lại trang chủ.
         </Typography>
 
-        {/* Các nút điều hướng kiểu viên thuốc */}
         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
           <Button
             variant="contained"
-            color="error" // Đồng bộ màu đỏ chính
+            color="error"
             onClick={() => navigate('/')}
             sx={{
               fontWeight: 'bold',
               px: 4,
               py: 1.2,
-              borderRadius: '25px', // Bo tròn kiểu viên thuốc đồng bộ TickeZ
+              borderRadius: '25px',
               textTransform: 'uppercase',
               fontSize: '0.75rem',
               letterSpacing: '1px',

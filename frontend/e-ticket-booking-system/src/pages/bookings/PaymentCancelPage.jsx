@@ -8,10 +8,7 @@ import {
 } from '@mui/material';
 import { Cancel, ArrowBack, Replay } from '@mui/icons-material';
 
-/**
- * Trang hiển thị khi user huỷ thanh toán PayOS.
- * Đồng bộ với phong cách thiết kế của TickeZ.
- */
+
 const PaymentCancelPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -32,7 +29,7 @@ const PaymentCancelPage = () => {
             boxShadow: '0 8px 30px rgba(0,0,0,0.02)'
           }}
         >
-          {/* Vòng tròn cảnh báo nổi bật kiểu TickeZ */}
+
           <Box
             sx={{
               width: 100,
@@ -41,7 +38,7 @@ const PaymentCancelPage = () => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: 'rgba(239, 68, 68, 0.08)', // Nền đỏ nhạt dịu mắt
+              backgroundColor: 'rgba(239, 68, 68, 0.08)',
               mx: 'auto',
               mb: 3,
             }}
@@ -73,7 +70,7 @@ const PaymentCancelPage = () => {
                 mb: 4, 
                 p: 2.5, 
                 bgcolor: 'rgba(239, 68, 68, 0.02)', 
-                border: '1px dashed rgba(239, 68, 68, 0.2)', // Viền nét đứt nhẹ nhàng
+                border: '1px dashed rgba(239, 68, 68, 0.2)',
                 borderRadius: '16px', 
                 textAlign: 'left' 
               }}
@@ -89,7 +86,6 @@ const PaymentCancelPage = () => {
             </Box>
           )}
 
-          {/* Các nút bấm điều hướng bo tròn viên thuốc của TickeZ */}
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
             <Button
               variant="outlined"
@@ -100,7 +96,7 @@ const PaymentCancelPage = () => {
                 fontWeight: 'bold',
                 px: 3.5,
                 py: 1.2,
-                borderRadius: '25px', // Bo tròn kiểu TickeZ
+                borderRadius: '25px',
                 textTransform: 'uppercase',
                 fontSize: '0.75rem',
                 letterSpacing: '1px',
@@ -122,7 +118,7 @@ const PaymentCancelPage = () => {
                 fontWeight: 'bold',
                 px: 3.5,
                 py: 1.2,
-                borderRadius: '25px', // Bo tròn kiểu TickeZ
+                borderRadius: '25px',
                 textTransform: 'uppercase',
                 fontSize: '0.75rem',
                 letterSpacing: '1px',

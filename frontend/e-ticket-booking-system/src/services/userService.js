@@ -13,7 +13,6 @@ const userService = {
         return axiosClient.put('/api/users/me/password', data); //
     },
 
-    // Tài liệu không đề cập API upload ảnh riêng, nhưng nếu backend vẫn giữ route này:
     uploadImage(file) {
         const formData = new FormData();
         formData.append('file', file);

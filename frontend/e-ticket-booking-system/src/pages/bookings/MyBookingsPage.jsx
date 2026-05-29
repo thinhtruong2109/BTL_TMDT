@@ -77,7 +77,7 @@ const MyBookingsPage = () => {
             component={Paper}
             elevation={0}
             sx={{ 
-              borderRadius: '16px', // Góc bo tròn bảng hiện đại
+              borderRadius: '16px',
               border: '1px solid #e2e8f0',
               boxShadow: '0 4px 12px rgba(0,0,0,0.02)',
               overflow: 'hidden'
@@ -142,7 +142,7 @@ const MyBookingsPage = () => {
                           startIcon={<Visibility />}
                           onClick={() => navigate(`/my-bookings/${booking.id}`)}
                           sx={{
-                            borderRadius: '15px', // Bo tròn nút nhỏ gọn
+                            borderRadius: '15px', 
                             fontWeight: 'bold',
                             fontSize: '0.7rem',
                             textTransform: 'uppercase',
@@ -163,7 +163,7 @@ const MyBookingsPage = () => {
                             startIcon={<Cancel />}
                             onClick={() => handleCancel(booking.id)}
                             sx={{
-                              borderRadius: '15px', // Bo tròn nút nhỏ gọn
+                              borderRadius: '15px', 
                               fontWeight: 'bold',
                               fontSize: '0.7rem',
                               textTransform: 'uppercase',

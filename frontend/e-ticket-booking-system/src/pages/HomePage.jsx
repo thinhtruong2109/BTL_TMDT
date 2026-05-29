@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Store, RefreshCw, ShieldCheck } from 'lucide-react'; // Import icon cho Marketplace
+import { Store, RefreshCw, ShieldCheck } from 'lucide-react';
 
-// UI Components
 import Footer from '../components/Footer';
 import HeaderBar from '../components/HeaderBar';
 import CatalogBar from '../components/CatalogBar';
@@ -35,14 +34,12 @@ const HomePage = () => {
           categoryApi.getAll(),
         ]);
 
-        // Trích xuất data an toàn
         const rawEvents = Array.isArray(evRes.data)
           ? evRes.data
           : evRes.data?.content
           ? evRes.data.content
           : [];
 
-        // Map data để tương thích với prop của component <ListEvent />
         const mappedEvents = rawEvents.map((evt) => ({
           id: evt.id,
           title: evt.name,
@@ -66,7 +63,6 @@ const HomePage = () => {
     loadData();
   }, []);
 
-  // Bộ lọc sự kiện sắp diễn ra
   const upcomingEvents = useMemo(() => {
     const now = new Date();
     return events
@@ -80,7 +76,6 @@ const HomePage = () => {
 
   return (
     <div className="bg-home relative min-h-screen isolate font-montserrat">
-      {/* Lớp nền ảnh mờ */}
       <div
         className="fixed inset-0 -z-20 w-full h-full"
         style={{
@@ -99,7 +94,6 @@ const HomePage = () => {
         <CatalogBar categories={categories} />
 
         <HeroBanner />
-
 
         {/* SỰ KIỆN NỔI BẬT */}
         {upcomingEvents.length > 0 && (

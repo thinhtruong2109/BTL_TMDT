@@ -5,24 +5,20 @@ import { userApi } from '../../api';
 
 const Profile = () => {
   const { user, refreshUser } = useAuth();
-  const [activeTab, setActiveTab] = useState('profile'); // 'profile' hoặc 'security'
+  const [activeTab, setActiveTab] = useState('profile');
 
-  // Form Thông tin cá nhân
   const [profile, setProfile] = useState({ fullName: '', phoneNumber: '' });
   const [profileLoading, setProfileLoading] = useState(false);
 
-  // Form Đổi mật khẩu
   const [password, setPassword] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [passwordLoading, setPasswordLoading] = useState(false);
 
-  // Đổ dữ liệu user vào form khi load
   useEffect(() => {
     if (user) {
       setProfile({ fullName: user.fullName || '', phoneNumber: user.phoneNumber || '' });
     }
   }, [user]);
 
-  // Xử lý Cập nhật thông tin
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     setProfileLoading(true);
@@ -38,7 +34,6 @@ const Profile = () => {
     }
   };
 
-  // Xử lý Đổi mật khẩu
   const handleChangePassword = async (e) => {
     e.preventDefault();
     if (password.newPassword !== password.confirmPassword) {
@@ -57,7 +52,6 @@ const Profile = () => {
         newPassword: password.newPassword,
       });
       toast.success('Đổi mật khẩu thành công!');
-      // Reset form mật khẩu
       setPassword({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
       const errorMsg = err.response?.data?.message || err.message || "Đổi mật khẩu thất bại!";
@@ -67,16 +61,15 @@ const Profile = () => {
     }
   };
 
-  if (!user) return null; // Tránh render khi chưa có dữ liệu
+  if (!user) return null;
 
   return (
     <div className="max-w-[1440px] mx-auto px-5 md:px-[122px] py-10 font-montserrat animate-fade-in">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
         
-        {/* CỘT TRÁI - TÓM TẮT USER */}
+        {/* CỘT TRÁI*/}
         <div className="md:col-span-4">
           <div className="bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center">
-            {/* Avatar chữ cái đầu */}
             <div className="w-28 h-28 bg-gray-800 text-white rounded-full flex items-center justify-center text-5xl font-extrabold mb-4 shadow-md uppercase">
               {user?.fullName?.[0] || 'U'}
             </div>
@@ -84,18 +77,16 @@ const Profile = () => {
             <h2 className="text-xl font-bold text-gray-900 mb-1">{user?.fullName}</h2>
             <p className="text-sm font-medium text-gray-500 mb-4">{user?.email}</p>
             
-            {/* Phân quyền Badge */}
             <span className="px-4 py-1.5 bg-gray-200 text-gray-700 rounded-full text-xs font-bold uppercase tracking-wider">
               {user?.role || 'CUSTOMER'}
             </span>
           </div>
         </div>
 
-        {/* CỘT PHẢI - NỘI DUNG TABS */}
+        {/* CỘT PHẢI */}
         <div className="md:col-span-8">
           <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
             
-            {/* Tiêu đề Tabs */}
             <div className="flex border-b border-gray-200">
               <button
                 className={`flex-1 py-4 text-sm font-bold uppercase transition-colors ${
@@ -119,7 +110,6 @@ const Profile = () => {
               </button>
             </div>
 
-            {/* Nội dung Tab Thông tin cá nhân */}
             {activeTab === 'profile' && (
               <div className="p-8 animate-fade-in">
                 <h3 className="text-xl font-bold text-gray-900 mb-6">Chi tiết hồ sơ</h3>
@@ -164,7 +154,6 @@ const Profile = () => {
               </div>
             )}
 
-            {/* Nội dung Tab Bảo mật */}
             {activeTab === 'security' && (
               <div className="p-8 animate-fade-in">
                 <h3 className="text-xl font-bold text-gray-900 mb-6">Đổi mật khẩu</h3>

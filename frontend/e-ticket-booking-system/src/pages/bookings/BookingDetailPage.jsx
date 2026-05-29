@@ -94,11 +94,8 @@ const BookingDetailPage = () => {
           </Alert>
         )}
 
-        {/* BẮT ĐẦU FIX LỖI GRID TẠI ĐÂY */}
         <Grid container spacing={4}>
-          {/* Thay vì <Grid item xs={12} md={8}>, ta dùng <Grid size={{ xs: 12, md: 8 }}> */}
           <Grid size={{ xs: 12, md: 8 }}>
-
             {/* THÔNG TIN ĐƠN HÀNG */}
             <Paper elevation={0} sx={{ p: 4, mb: 4, borderRadius: '24px', border: '1px solid #eef2f6' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -199,7 +196,7 @@ const BookingDetailPage = () => {
             )}
           </Grid>
 
-          {/* CỘT PHẢI - Thay đổi cú pháp size */}
+          {/* CỘT PHẢI */}
           <Grid size={{ xs: 12, md: 4 }}>
 
             {/* THANH TOÁN */}
@@ -207,7 +204,6 @@ const BookingDetailPage = () => {
               <Typography variant="h6" gutterBottom fontWeight={800} color="#0f172a">Thanh Toán</Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 3 }}>
 
-                {/* 1. HIỂN THỊ THÔNG TIN GIAO DỊCH (NẾU TỒN TẠI) */}
                 {payment && payment.status && (
                   <Box sx={{
                     mb: booking.status === 'PENDING' ? 2 : 0,
@@ -231,7 +227,6 @@ const BookingDetailPage = () => {
                   </Box>
                 )}
 
-                {/* 2. LUÔN HIỂN THỊ NÚT THANH TOÁN NẾU ĐƠN ĐANG PENDING */}
                 {booking.status === 'PENDING' ? (
                   <Box>
                     <Typography variant="body2" color="#64748b" sx={{ mb: 2, fontWeight: 500 }}>
@@ -253,7 +248,6 @@ const BookingDetailPage = () => {
                     </Button>
                   </Box>
                 ) : !payment?.status && (
-                  // Nếu không PENDING và cũng không có payment thì báo trống
                   <Typography variant="body2" color="#64748b" fontWeight={500}>Không có dữ liệu giao dịch.</Typography>
                 )}
               </Box>

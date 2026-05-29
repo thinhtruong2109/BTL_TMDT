@@ -1,14 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { 
-  ArrowLeft, 
-  Minus, 
-  Plus, 
-  InfoIcon, 
-  Armchair, 
-  Tag, 
-  ChevronDown, 
+import {
+  ArrowLeft,
+  Minus,
+  Plus,
+  InfoIcon,
+  Armchair,
+  Tag,
+  ChevronDown,
   ChevronUp,
   CheckCircle2
 } from 'lucide-react';
@@ -39,7 +39,6 @@ const CreateBookingPage = () => {
   const [selectedSeatIds, setSelectedSeatIds] = useState([]);
   const [loadingSeats, setLoadingSeats] = useState(false);
 
-  // --- BẮT ĐẦU PHẦN LOGIC GIỮ NGUYÊN BẢN ---
   useEffect(() => {
     fetchData();
   }, [eventId]);
@@ -194,8 +193,10 @@ const CreateBookingPage = () => {
       const newVal = Math.max(0, Math.min(max, current + delta));
       return { ...prev, [ttId]: newVal };
     });
+
     setSelectedPromo(null);
     setSelectedSeatIds([]);
+    setShowPromos(false);
   };
 
   const handleFetchPromos = async () => {
@@ -205,13 +206,22 @@ const CreateBookingPage = () => {
     }
     setLoadingPromos(true);
     setShowPromos(true);
+
     try {
       const items = Object.entries(quantities)
         .filter(([, qty]) => qty > 0)
         .map(([ticketTypeId, quantity]) => ({ ticketTypeId: parseInt(ticketTypeId), quantity }));
+
       const res = await promoCodeApi.getAvailable({ eventId: parseInt(eventId), items });
-      setPromos(res.data.availablePromoCodes || []);
-    } catch {
+
+      const responseData = res.data || res;
+      const fetchedPromos = Array.isArray(responseData)
+        ? responseData
+        : (responseData.availablePromoCodes || responseData.content || []);
+
+      setPromos(fetchedPromos);
+    } catch (err) {
+      console.error("Lỗi fetch promo:", err);
       setPromos([]);
     } finally {
       setLoadingPromos(false);
@@ -243,7 +253,7 @@ const CreateBookingPage = () => {
         }
       }
     }
-    
+
     setSubmitting(true);
     try {
       const items = Object.entries(quantities)
@@ -271,11 +281,10 @@ const CreateBookingPage = () => {
   const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
   const formatDateTime = (dateStr) => {
     if (!dateStr) return '';
-    return new Date(dateStr).toLocaleString('vi-VN', { 
-      hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' 
+    return new Date(dateStr).toLocaleString('vi-VN', {
+      hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
     });
   };
-  // --- KẾT THÚC PHẦN LOGIC ---
 
   if (loading) return (
     <div className="min-h-screen bg-[#D9D9D9] flex justify-center items-center">
@@ -297,16 +306,16 @@ const CreateBookingPage = () => {
         </button>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 relative">
-          
-          {/* CỘT TRÁI - CHI TIẾT TÙY CHỌN */}
+
+          {/* CỘT TRÁI */}
           <section className="md:col-span-8 space-y-6">
-            
+
             {/* 1. CHỌN LỊCH CHIẾU */}
             {schedules.length > 1 && (
               <div className="bg-white rounded-2xl p-7 shadow-lg">
                 <h2 className="font-bold text-primary text-xl mb-4 uppercase">Chọn Lịch Chiếu</h2>
-                <select 
-                  value={selectedSchedule} 
+                <select
+                  value={selectedSchedule}
                   onChange={(e) => setSelectedSchedule(e.target.value)}
                   className="w-full h-12 px-4 border border-gray-300 rounded-xl font-bold text-gray-700 outline-none focus:border-primary"
                 >
@@ -349,7 +358,7 @@ const CreateBookingPage = () => {
                             {formatCurrency(tt.price)}
                           </p>
                           <p className="text-xs italic text-gray-500 mt-1 font-medium">
-                            {tt.sectionName ? `Khu vực: ${tt.sectionName} · ` : ''} 
+                            {tt.sectionName ? `Khu vực: ${tt.sectionName} · ` : ''}
                             Còn lại: {tt.availableQuantity} vé (Tối đa {tt.maxPerBooking}/đơn)
                           </p>
                         </div>
@@ -361,7 +370,7 @@ const CreateBookingPage = () => {
                             </div>
                           ) : (
                             <div className="flex items-center gap-2 bg-white rounded-full px-3 py-1 shadow-sm">
-                              <button 
+                              <button
                                 onClick={() => handleQuantityChange(tt.id, -1, maxAllowed)}
                                 disabled={currentQty === 0}
                                 className="disabled:opacity-30"
@@ -373,7 +382,7 @@ const CreateBookingPage = () => {
                                 {currentQty}
                               </span>
 
-                              <button 
+                              <button
                                 onClick={() => handleQuantityChange(tt.id, 1, maxAllowed)}
                                 disabled={currentQty >= maxAllowed}
                                 className="disabled:opacity-30"
@@ -409,9 +418,8 @@ const CreateBookingPage = () => {
                     <Armchair className="w-6 h-6 text-primary" />
                     <h2 className="font-bold text-gray-900 text-xl uppercase">Sơ đồ chọn ghế</h2>
                   </div>
-                  <span className={`px-3 py-1 text-xs font-bold rounded-full uppercase border ${
-                    selectedSeatIds.length === requiredSeatCount ? 'bg-green-50 text-green-600 border-green-200' : 'bg-gray-100 text-gray-600 border-gray-200'
-                  }`}>
+                  <span className={`px-3 py-1 text-xs font-bold rounded-full uppercase border ${selectedSeatIds.length === requiredSeatCount ? 'bg-green-50 text-green-600 border-green-200' : 'bg-gray-100 text-gray-600 border-gray-200'
+                    }`}>
                     Đã chọn {selectedSeatIds.length} / {requiredSeatCount}
                   </span>
                 </div>
@@ -431,7 +439,7 @@ const CreateBookingPage = () => {
                         * Vui lòng chọn ghế tương ứng với các khu vực của vé bạn đã đặt.
                       </p>
                     )}
-                    
+
                     {Object.entries(seatsBySection).map(([sectionName, rows]) => {
                       const sectionEntry = Object.entries(seatRequirementsBySection).find(([, val]) => val.sectionName === sectionName);
                       const sectionId = sectionEntry ? Number(sectionEntry[0]) : null;
@@ -449,7 +457,7 @@ const CreateBookingPage = () => {
                               </span>
                             )}
                           </div>
-                          
+
                           {Object.entries(rows).map(([rowLabel, seats]) => (
                             <div key={rowLabel} className="flex items-center gap-3 mb-2">
                               <div className="w-8 text-center font-extrabold text-gray-400 bg-white shadow-sm rounded-md py-1">
@@ -461,7 +469,7 @@ const CreateBookingPage = () => {
                                   const isDisabled = !seat.available;
                                   const isSectionFull = !isSelected && sectionFull;
                                   const isGlobalFull = !isSelected && selectedSeatIds.length >= requiredSeatCount;
-                                  
+
                                   let btnClass = "w-9 h-9 text-xs font-bold rounded-md flex items-center justify-center transition-all ";
                                   if (isSelected) {
                                     btnClass += "bg-primary text-white shadow-md scale-105";
@@ -519,7 +527,7 @@ const CreateBookingPage = () => {
 
             {/* 4. MÃ GIẢM GIÁ */}
             <div className="bg-white rounded-2xl p-7 shadow-lg">
-              <div 
+              <div
                 className="flex items-center justify-between cursor-pointer"
                 onClick={() => (showPromos ? setShowPromos(false) : handleFetchPromos())}
               >
@@ -543,13 +551,12 @@ const CreateBookingPage = () => {
                           <div
                             key={promo.id}
                             onClick={() => setSelectedPromo(isSelected ? null : promo)}
-                            className={`p-4 rounded-xl border cursor-pointer transition-all flex justify-between items-center ${
-                              isSelected ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-primary/50'
-                            }`}
+                            className={`p-4 rounded-xl border cursor-pointer transition-all flex justify-between items-center ${isSelected ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-primary/50'
+                              }`}
                           >
                             <div>
                               <p className="font-extrabold text-gray-900 uppercase flex items-center gap-2">
-                                {promo.code} 
+                                {promo.code}
                                 {isSelected && <CheckCircle2 className="w-4 h-4 text-primary" />}
                               </p>
                               {promo.description && (
@@ -578,7 +585,7 @@ const CreateBookingPage = () => {
                   {event.name}
                 </h2>
               </div>
-              
+
               <div className="h-0.5 bg-white/20 mx-6" />
 
               <div className="bg-white rounded-xl m-6 p-6 shadow-sm">
@@ -646,7 +653,7 @@ const CreateBookingPage = () => {
                 </div>
 
                 <div className="mt-8 flex justify-center">
-                  <button 
+                  <button
                     onClick={handleSubmit}
                     disabled={submitting || itemCount === 0 || (requiresSeats && selectedSeatIds.length !== requiredSeatCount)}
                     className="w-full bg-primary hover:bg-red-600 text-white font-bold py-3.5 rounded-xl transition-colors uppercase tracking-wide shadow-lg shadow-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -654,7 +661,7 @@ const CreateBookingPage = () => {
                     {submitting ? 'Đang xử lý...' : 'THANH TOÁN NGAY'}
                   </button>
                 </div>
-                
+
                 <p className="text-[11px] font-bold text-gray-400 text-center mt-4 uppercase">
                   * Vé sẽ được giữ trong vòng 15 phút
                 </p>

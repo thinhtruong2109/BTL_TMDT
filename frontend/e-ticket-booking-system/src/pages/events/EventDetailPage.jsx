@@ -7,7 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 import HeaderBar from '../../components/HeaderBar';
 import Footer from '../../components/Footer';
-import TicketDetail from '../../components/TicketDetail'; // Sử dụng Component Header bo cong
+import TicketDetail from '../../components/TicketDetail';
 import defaultAvatar from '../../assets/images/default_img.png';
 
 const EventDetailPage = () => {
@@ -20,7 +20,6 @@ const EventDetailPage = () => {
   const [ticketTypes, setTicketTypes] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // State điều khiển mở rộng mô tả và accordion vé
   const [expanded, setExpanded] = useState(false);
   const [openItem, setOpenItem] = useState(null);
 
@@ -59,19 +58,19 @@ const EventDetailPage = () => {
 
   if (!event) return null;
 
-  // Dữ liệu cắt gọn cho mô tả
   const description = event.description || "Đang cập nhật mô tả...";
   const shortText = description.slice(0, 300) + (description.length > 300 ? "..." : "");
 
-  // Truyền data map cho TicketDetail (Header)
   const mappedEventForHeader = {
       id: event.id,
       title: event.name,
       eventTime: schedules.length > 0 ? schedules[0].startTime : null,
-      location: event.venueName + (event.venueAddress ? ` - ${event.venueAddress}` : ""),
+      location: event.venue 
+        ? `${event.venue.name} - ${event.venue.address}, ${event.venue.city}` 
+        : "Đang cập nhật địa điểm",
       event_banner_url: event.bannerImageUrl || defaultAvatar,
       event_thumbnailImageUrl: event.thumbnailImageUrl|| defaultAvatar,
-      ticketTypes: ticketTypes // Để TicketDetail lấy minPrice
+      ticketTypes: ticketTypes
   };
 
   return (
@@ -82,7 +81,7 @@ const EventDetailPage = () => {
       {/* NỘI DUNG CHÍNH */}
       <main className="flex-grow pb-10">
         
-        {/* ROW 1: GIỚI THIỆU & ĐƠN VỊ TỔ CHỨC */}
+        {/* ROW 1 */}
         <section className="max-w-7xl mx-auto px-4 py-4 flex gap-8 w-full">
             {/* GIỚI THIỆU */}
             <div className="flex-[2] translate-y-[-1rem] animate-fade-in opacity-0 [--animation-delay:200ms]">
@@ -117,14 +116,14 @@ const EventDetailPage = () => {
                             <img
                                 className="w-[100px] h-[100px] object-cover rounded-full border-gray-200 border-[2px]"
                                 alt="Organization Logo"
-                                src={event.organizerLogo || defaultAvatar}
+                                src={defaultAvatar}
                             />
                             <div>
                                 <h3 className="font-bold text-black text-base mb-2">
-                                    {event.organizerName || "Đang cập nhật"}
+                                    {event.organizer?.fullName || "Đang cập nhật"}
                                 </h3>
                                 <p className="font-medium text-secondary text-sm">
-                                    {event.organizerInfo || "Thông tin nhà tổ chức đang được cập nhật."}
+                                    {event.organizer?.email || "Thông tin nhà tổ chức đang được cập nhật."}
                                 </p>
                             </div>
                         </div>
@@ -133,7 +132,7 @@ const EventDetailPage = () => {
             </div>
         </section>
 
-        {/* ROW 2: THÔNG TIN VÉ & BANNER ĐỨNG */}
+        {/* ROW 2*/}
         <section className="max-w-7xl mx-auto px-4 py-4 flex gap-8 w-full">
             {/* THÔNG TIN VÉ */}
             <div className="flex-[2] translate-y-[-1rem] animate-fade-in opacity-0 [--animation-delay:600ms]">

@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
-// Lấy authApi từ file api của bạn (Hãy kiểm tra lại đường dẫn import cho đúng với máy bạn)
 import { authApi } from '../../api'; 
 
 import logo from "../../assets/images/logo.png";
@@ -10,7 +9,6 @@ import logo from "../../assets/images/logo.png";
 const VerifyEmailPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  // Lấy email được truyền sang từ trang Đăng ký (RegisterModal) hoặc Đăng nhập (LoginModal)
   const email = location.state?.email || '';
 
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -18,7 +16,6 @@ const VerifyEmailPage = () => {
   const [resending, setResending] = useState(false);
   const inputRefs = useRef([]);
 
-  // Nếu truy cập thẳng vào /verify-email mà không có email, đẩy về trang chủ
   useEffect(() => {
     if (!email) {
       navigate('/');
@@ -32,14 +29,12 @@ const VerifyEmailPage = () => {
     newOtp[index] = value;
     setOtp(newOtp);
 
-    // Tự động nhảy sang ô tiếp theo
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
   };
 
   const handleKeyDown = (index, e) => {
-    // Xóa lùi tự động nhảy về ô trước đó
     if (e.key === 'Backspace' && !otp[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
@@ -70,7 +65,6 @@ const VerifyEmailPage = () => {
       await authApi.verifyEmail({ email, otp: otpCode });
       toast.success('Xác thực email thành công! Vui lòng đăng nhập lại.');
       
-      // Chuyển hướng về trang chủ và có thể tự động mở Modal Đăng nhập (tùy logic của bạn)
       setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
       const errorMsg = err.response?.data?.message || err.message || "Mã OTP không hợp lệ hoặc đã hết hạn!";
@@ -99,7 +93,6 @@ const VerifyEmailPage = () => {
     <div className="min-h-screen bg-[#D9D9D9] flex items-center justify-center p-4 font-montserrat">
       <div className="bg-white rounded-3xl shadow-xl max-w-lg w-full p-10 flex flex-col items-center animate-fade-in">
         
-        {/* LOGO (Bọc trong nền cam để nổi bật chữ trắng) */}
         <div className="bg-primary p-3 rounded-xl mb-6 shadow-md cursor-pointer" onClick={() => navigate('/')}>
             <img src={logo} alt="TickeZ" className="h-8 w-auto" />
         </div>

@@ -32,7 +32,6 @@ const EventListPage = () => {
     setSearchName(nameFromUrl);
     setSelectedCategory(categoryFromUrl);
     
-    // Gọi fetch ngay khi params thay đổi
     fetchEvents(nameFromUrl, categoryFromUrl);
   }, [searchParams]);
 
@@ -56,14 +55,23 @@ const EventListPage = () => {
   
   const handleSearch = (e) => {
     e.preventDefault();
-    // Thay vì gọi fetch trực tiếp, hãy cập nhật URL để useEffect bên trên tự xử lý
-    setSearchParams({ name: searchName, categoryId: selectedCategory });
+    
+    const newParams = {};
+    if (searchName.trim()) newParams.name = searchName.trim();
+    if (selectedCategory) newParams.categoryId = selectedCategory;
+    
+    setSearchParams(newParams);
   };
 
   const handleCategoryChange = (catId) => {
     const newCat = catId === selectedCategory ? '' : catId;
     setSelectedCategory(newCat);
-    setSearchParams({ name: searchName, categoryId: newCat });
+    
+    const newParams = {};
+    if (searchName.trim()) newParams.name = searchName.trim();
+    if (newCat) newParams.categoryId = newCat; 
+    
+    setSearchParams(newParams);
   };
 
   return (
@@ -108,7 +116,7 @@ const EventListPage = () => {
           {categories.length > 0 && (
             <div className="flex gap-2 flex-wrap">
               <button
-                onClick={() => setSelectedCategory('')}
+                onClick={() => handleCategoryChange('')}
                 className={`px-5 py-2 rounded-full text-sm font-bold transition-all border-2 ${
                   selectedCategory === '' 
                     ? 'bg-gray-900 text-white border-gray-900' 
