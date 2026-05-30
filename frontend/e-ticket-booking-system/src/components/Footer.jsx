@@ -52,7 +52,7 @@ const Footer = () => {
             <div className="max-w-[1440px] mx-auto px-[122px]">
                 <div className="flex justify-between mb-8">
                     <div>
-                        <a href="/">
+                        <a href="/eticket/">
                             <img
                                 className="w-[345px] mb-8"
                                 alt="TickeZ Logo"
@@ -92,7 +92,7 @@ const Footer = () => {
                                 {section.links.map((link, linkIndex) => (
                                     <li key={linkIndex}>
                                         <a
-                                            href="/"
+                                            href="/eticket/"
                                             className="font-semibold text-white text-[10px] hover:underline transition-all"
                                         >
                                             {link}

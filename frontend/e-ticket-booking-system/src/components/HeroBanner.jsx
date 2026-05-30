@@ -16,7 +16,6 @@ const HeroBanner = () => {
             try {
                 const response = await eventService.getPublishedEvents();
                 
-                // 1. Trích xuất data an toàn (Hỗ trợ cả phân trang content của Spring Boot)
                 const rawEvents = Array.isArray(response.data) 
                     ? response.data 
                     : response.data?.content 
@@ -27,7 +26,6 @@ const HeroBanner = () => {
                     ? response.content
                     : [];
 
-                // 2. Map lại dữ liệu
                 let processedEvents = rawEvents.map(evt => {
                     return {
                         id: evt.id,
@@ -36,19 +34,16 @@ const HeroBanner = () => {
                             weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                         }).toUpperCase() + (evt.destination ? ` - ${evt.destination}` : '') : 'TBA',
                         eventTime: evt.eventTime,
-                        // Bắt đúng tên trường ảnh
                         image: evt.bannerImageUrl || evt.event_banner_url || evt.event_picture || defaultImage, 
                     };
                 });
 
                 const now = new Date();
                 
-                // Lọc sự kiện sắp diễn ra
                 let upcomingEvents = processedEvents
                     .filter(evt => evt.eventTime && new Date(evt.eventTime) > now)
                     .sort((a, b) => new Date(a.eventTime) - new Date(b.eventTime));
 
-                // 3. Fallback: Nếu data test trong DB toàn ngày quá khứ, lấy luôn sự kiện cũ ra để hiển thị (tránh lỗi trắng trang)
                 if (upcomingEvents.length === 0) {
                     upcomingEvents = processedEvents; 
                 }
@@ -56,7 +51,6 @@ const HeroBanner = () => {
                 upcomingEvents = upcomingEvents.slice(0, 10);
                 setEvents(upcomingEvents);
 
-                // Random 2 sự kiện cho 2 ô bên phải
                 if (upcomingEvents.length > 0) {
                     const shuffled = [...upcomingEvents].sort(() => 0.5 - Math.random());
                     setRandomEvents(shuffled.slice(0, 2));
@@ -98,7 +92,6 @@ const HeroBanner = () => {
         <Loader text="Đang tải..." height="250px"/>
     );
     
-    // Nếu vẫn không có data sau khi lọc
     if (!events || events.length === 0) {
         return (
             <div className="flex-grow py-8 w-full flex justify-center items-center h-[480px] bg-gray-100 rounded-lg">

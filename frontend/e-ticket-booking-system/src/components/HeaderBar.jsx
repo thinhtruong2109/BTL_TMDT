@@ -14,14 +14,11 @@ import { BsTicketPerforatedFill } from "react-icons/bs";
 const HeaderBar = () => {
     const [searchQuery, setSearchQuery] = useState("");
 
-    // State điều khiển việc đóng/mở Modal
     const [showLogin, setShowLogin] = useState(false);
     const [showRegister, setShowRegister] = useState(false);
 
-    // LẤY TRẠNG THÁI VÀ THÔNG TIN USER TỪ AUTHCONTEXT
     const { isAuthenticated, logout, user } = useAuth();
 
-    // XÁC ĐỊNH VAI TRÒ DỰA TRÊN THÔNG TIN USER ĐĂNG NHẬP
     const isAdmin = user?.role === 'ADMIN';
     const isOrganizer = user?.role === 'ORGANIZER';
 
@@ -38,7 +35,7 @@ const HeaderBar = () => {
     };
 
     const handleLogout = () => {
-        logout(); // Gọi thẳng hàm logout của Context để dọn dẹp token
+        logout();
         navigate("/");
     };
 
@@ -46,7 +43,7 @@ const HeaderBar = () => {
         <>
             <header className="w-full bg-primary shadow-[0px_4px_6px_#00000026] sticky top-0 z-50 font-montserrat">
                 <div className="flex items-center justify-between px-[20px] py-[8px] max-w-[1440px] mx-auto">
-                    <a href="/">
+                    <a href="/eticket/">
                         <img className="w-[204px]" alt="TickeZ Logo" src={logo} />
                     </a>
 
