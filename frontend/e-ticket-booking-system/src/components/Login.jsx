@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../contexts/AuthContext";
-import authService from "../services/authService"; // Thêm dòng này (điều chỉnh đường dẫn cho đúng cấu trúc thư mục)
+import authService from "../services/authService";
 
 import logo from "../assets/images/logo.png";
 import illu from "../assets/images/illu.png";
@@ -51,7 +51,7 @@ export default function LoginModal({ isOpen, onClose, setIsLoggedIn, openRegiste
     };
 
     const handleGoogleLogin = () => {
-        authService.loginWithGoogle(); // Gọi hàm từ authService
+        authService.loginWithGoogle();
     };
 
     return (
@@ -140,7 +140,7 @@ export default function LoginModal({ isOpen, onClose, setIsLoggedIn, openRegiste
                     {/* Right */}
                     <div className="bg-primary flex-1 relative hidden md:flex">
                         <div className="absolute inset-0 flex flex-col items-center justify-center text-white px-8">
-                            <img src={logo} alt="TickeZ" className="w-60 mb-2 drop-shadow-md" />
+                            <img src={logo} alt="TickeZ" className="w-60 mb-2" />
                             <p className="text-xl font-bold tracking-wider mb-8 uppercase drop-shadow-md">
                                 vé liền tay - tickeZ. ngay
                             </p>

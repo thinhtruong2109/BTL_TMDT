@@ -40,7 +40,6 @@ const Paying = ({ eventData, selectedTickets, onStartPayment }) => {
       const startDate = new Date(v.start_date);
       const endDate = new Date(v.end_date);
       const isValidDate = now >= startDate && now <= endDate;
-      // v.price trong JSON đóng vai trò là số tiền tối thiểu để áp dụng voucher
       const minOrderPrice = v.price || 0; 
       const isMinPriceMet = subTotal >= minOrderPrice;
 

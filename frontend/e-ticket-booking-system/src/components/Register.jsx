@@ -162,7 +162,7 @@ export default function RegisterModal({ isOpen, onClose, openLogin }) {
                     {/* RIGHT */}
                     <div className="bg-primary flex-1 relative hidden md:flex">
                         <div className="absolute inset-0 flex flex-col items-center justify-center text-white px-8">
-                            <img src={logo} alt="TickeZ" className="w-60 mb-2 drop-shadow-md" />
+                            <img src={logo} alt="TickeZ" className="w-60 mb-2" />
                             <p className="text-xl font-bold tracking-wider mb-8 uppercase drop-shadow-md">
                                 vé liền tay - tickeZ. ngay
                             </p>

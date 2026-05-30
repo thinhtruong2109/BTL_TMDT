@@ -76,7 +76,7 @@ const RegisterPage = () => {
           <Box
             component="img"
             src={`${import.meta.env.BASE_URL}APPICON.png`}
-            alt="Alo Vé"
+            alt="TickeZ"
             sx={{ height: 45, width: 'auto', mb: 1.5 }}
           />
           <Typography variant="overline" color="text.secondary">

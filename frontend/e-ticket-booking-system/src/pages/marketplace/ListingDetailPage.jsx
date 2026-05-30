@@ -5,7 +5,7 @@ import { ArrowLeft, ShoppingCart, RefreshCw, Ticket as TicketIcon } from 'lucide
 import { ticketListingApi, ticketApi } from '../../api';
 
 
-const PAYMENT_METHODS = ['VNPAY', 'MOMO', 'CREDIT_CARD']; // Thay bằng constant của bạn nếu cần
+const PAYMENT_METHODS = ['VNPAY', 'MOMO', 'CREDIT_CARD'];
 
 const ListingDetailPage = () => {
   const { id } = useParams();
@@ -51,7 +51,7 @@ const ListingDetailPage = () => {
         paymentMethod,
       });
       toast.success("Mua vé thành công!");
-      navigate('/my-ticket'); // Đổi thành route vé của bạn
+      navigate('/my-ticket'); 
     } catch (err) {
       toast.error(err.response?.data?.message || "Giao dịch thất bại!");
     } finally {

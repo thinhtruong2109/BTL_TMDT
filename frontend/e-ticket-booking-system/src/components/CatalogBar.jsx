@@ -44,7 +44,6 @@ const CatalogBar = () => {
               <React.Fragment key={category.id || index}>
                 {index > 0 && <div className="h-5 w-[2px] bg-primary opacity-75 mx-3 flex-shrink-0" />}
                 <a
-                  // Chuyển hướng tìm kiếm theo categoryId tương ứng từ API
                   href={`/eticket/events?categoryId=${category.id}`}
                   className="font-semibold text-primary text-xs hover:text-myred transition-all whitespace-nowrap flex-shrink-0"
                 >

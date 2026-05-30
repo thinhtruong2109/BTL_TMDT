@@ -33,7 +33,6 @@ const Booking = () => {
         }
       } catch (error) {
         toast.error("Không thể tải thông tin sự kiện. Vui lòng thử lại sau!");
-        // console.error("Lỗi tải thông tin sự kiện:", error);
       } finally {
         setLoading(false);
       }

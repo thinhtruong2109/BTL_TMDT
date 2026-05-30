@@ -13,10 +13,6 @@ import { CheckCircle, ConfirmationNumber, ArrowBack, HourglassTop } from '@mui/i
 import { paymentApi } from '../../api';
 import { formatCurrency, getErrorMessage } from '../../utils/helpers';
 
-/**
- * Trang hiển thị khi thanh toán PayOS thành công.
- * Đồng bộ phong cách thiết kế với hệ thống TickeZ.
- */
 const PaymentSuccessPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -78,7 +74,6 @@ const PaymentSuccessPage = () => {
             boxShadow: '0 8px 30px rgba(0,0,0,0.02)'
           }}
         >
-          {/* Vòng tròn biểu tượng trạng thái nổi bật kiểu TickeZ */}
           <Box
             sx={{
               width: 100,
@@ -153,7 +148,6 @@ const PaymentSuccessPage = () => {
             </Typography>
           </Box>
 
-          {/* Các nút bấm điều hướng bo tròn kiểu viên thuốc đặc trưng */}
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
             {paymentInfo?.bookingId && (
               <Button
@@ -165,7 +159,7 @@ const PaymentSuccessPage = () => {
                   fontWeight: 'bold',
                   px: 3.5,
                   py: 1.2,
-                  borderRadius: '25px', // Bo tròn kiểu viên thuốc TickeZ
+                  borderRadius: '25px',
                   textTransform: 'uppercase',
                   fontSize: '0.75rem',
                   letterSpacing: '1px',
@@ -190,7 +184,7 @@ const PaymentSuccessPage = () => {
                 fontWeight: 'bold',
                 px: 3.5,
                 py: 1.2,
-                borderRadius: '25px', // Bo tròn kiểu viên thuốc TickeZ
+                borderRadius: '25px',
                 textTransform: 'uppercase',
                 fontSize: '0.75rem',
                 letterSpacing: '1px',
