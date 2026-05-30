@@ -1,35 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
-  Container,
-  Paper,
-  Typography,
-  Box,
-  Button,
-  Divider,
-  Alert,
-  Grid,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-} from '@mui/material';
-import { ArrowBack, ShoppingCart, SwapHoriz } from '@mui/icons-material';
+import { toast } from 'react-toastify';
+import { ArrowLeft, ShoppingCart, RefreshCw, Ticket as TicketIcon } from 'lucide-react';
 import { ticketListingApi, ticketApi } from '../../api';
-import { LoadingScreen, ErrorAlert, PageHeader } from '../../components/common';
-import { formatCurrency, getErrorMessage } from '../../utils/helpers';
-import { PAYMENT_METHODS } from '../../utils/constants';
+
+
+const PAYMENT_METHODS = ['VNPAY', 'MOMO', 'CREDIT_CARD']; // Thay bằng constant của bạn nếu cần
 
 const ListingDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('VNPAY');
 
-  // For trade
   const [myTickets, setMyTickets] = useState([]);
   const [tradeTicketId, setTradeTicketId] = useState('');
 
@@ -50,7 +36,7 @@ const ListingDetailPage = () => {
         setMyTickets(available);
       }
     } catch (err) {
-      setError(getErrorMessage(err));
+      toast.error(err.response?.data?.message || "Lỗi tải thông tin vé!");
     } finally {
       setLoading(false);
     }
@@ -58,162 +44,186 @@ const ListingDetailPage = () => {
 
   const handlePurchase = async () => {
     setSubmitting(true);
-    setError('');
     try {
       await ticketListingApi.createExchange({
         ticketListingId: parseInt(id),
         transactionType: 'PURCHASE',
         paymentMethod,
       });
-      navigate('/my-bookings');
+      toast.success("Mua vé thành công!");
+      navigate('/my-ticket'); // Đổi thành route vé của bạn
     } catch (err) {
-      setError(getErrorMessage(err));
+      toast.error(err.response?.data?.message || "Giao dịch thất bại!");
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleTrade = async () => {
-    if (!tradeTicketId) return;
+    if (!tradeTicketId) {
+      toast.warning("Vui lòng chọn vé để trao đổi!");
+      return;
+    }
     setSubmitting(true);
-    setError('');
     try {
       await ticketListingApi.createExchange({
         ticketListingId: parseInt(id),
         transactionType: 'TRADE',
         tradeTicketId: parseInt(tradeTicketId),
       });
-      navigate('/my-tickets');
+      toast.success("Đề xuất trao đổi thành công!");
+      navigate('/my-ticket');
     } catch (err) {
-      setError(getErrorMessage(err));
+      toast.error(err.response?.data?.message || "Trao đổi thất bại!");
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) return <LoadingScreen />;
-  if (!listing) return <Container sx={{ py: 4 }}><ErrorAlert message="Listing not found" /></Container>;
+  const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
+
+  if (loading) return (
+    <div className="min-h-screen bg-[#D9D9D9] flex justify-center items-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+    </div>
+  );
+
+  if (!listing) return null;
 
   return (
-    <>
-      <PageHeader title="Ticket Listing" subtitle={listing.eventName || 'Marketplace'} />
-      <Container maxWidth="md" sx={{ py: 4 }}>
-        <Button startIcon={<ArrowBack />} onClick={() => navigate('/marketplace')} sx={{ mb: 3 }}>
-          Back to Marketplace
-        </Button>
+    <div className="min-h-screen bg-[#D9D9D9] font-montserrat flex flex-col">
 
-        {error && <ErrorAlert message={error} />}
+      <main className="flex-grow max-w-[1000px] w-full mx-auto px-5 py-10 animate-fade-in">
+        
+        <button
+          onClick={() => navigate('/marketplace')}
+          className="flex items-center gap-2 text-gray-600 hover:text-primary font-bold mb-6 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" /> Trở lại Chợ vé
+        </button>
 
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={7}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" fontWeight={600} gutterBottom>
-                Listing Details
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+          
+          {/* CỘT TRÁI - CHI TIẾT */}
+          <div className="md:col-span-7">
+            <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4 uppercase">Thông tin vé bán</h2>
+              <div className="w-12 h-1 bg-primary mb-6"></div>
 
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+              <div className="space-y-4">
                 {listing.eventName && (
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2" color="text.secondary">Event</Typography>
-                    <Typography variant="body2" fontWeight={500}>{listing.eventName}</Typography>
-                  </Box>
+                  <div className="flex justify-between items-start border-b border-gray-100 pb-3">
+                    <span className="text-gray-500 font-bold uppercase text-sm">Sự kiện</span>
+                    <span className="text-gray-900 font-bold text-right max-w-[60%]">{listing.eventName}</span>
+                  </div>
                 )}
                 {listing.ticketTypeName && (
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2" color="text.secondary">Ticket Type</Typography>
-                    <Typography variant="body2" fontWeight={500}>{listing.ticketTypeName}</Typography>
-                  </Box>
+                  <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+                    <span className="text-gray-500 font-bold uppercase text-sm">Loại vé</span>
+                    <span className="text-primary font-bold">{listing.ticketTypeName}</span>
+                  </div>
                 )}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2" color="text.secondary">Exchange Type</Typography>
-                  <Typography variant="body2" fontWeight={500}>{listing.exchangeType}</Typography>
-                </Box>
+                <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+                  <span className="text-gray-500 font-bold uppercase text-sm">Hình thức</span>
+                  <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-md font-bold text-xs uppercase">
+                    {listing.exchangeType}
+                  </span>
+                </div>
                 {listing.description && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Description</Typography>
-                    <Typography variant="body2" sx={{ mt: 0.5 }}>{listing.description}</Typography>
-                  </Box>
+                  <div className="pt-2">
+                    <span className="text-gray-500 font-bold uppercase text-sm block mb-2">Mô tả từ người bán</span>
+                    <p className="bg-gray-50 p-4 rounded-xl text-gray-700 text-sm font-medium italic">
+                      "{listing.description}"
+                    </p>
+                  </div>
                 )}
-              </Box>
+              </div>
 
-              <Box sx={{ mt: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
-                <Typography variant="caption" color="text.secondary">Listed Price</Typography>
-                <Typography variant="h4" fontWeight={700}>
-                  {formatCurrency(listing.listingPrice)}
-                </Typography>
-              </Box>
-            </Paper>
-          </Grid>
+              <div className="mt-8 bg-gray-50 border border-gray-200 rounded-xl p-5 text-center">
+                <p className="text-sm font-bold text-gray-500 uppercase mb-1">Mức giá niêm yết</p>
+                <p className="text-4xl font-extrabold text-primary">{formatCurrency(listing.listingPrice)}</p>
+              </div>
+            </div>
+          </div>
 
-          <Grid item xs={12} md={5}>
-            {/* Purchase */}
+          {/* CỘT PHẢI - THANH TOÁN / ĐỔI */}
+          <div className="md:col-span-5 space-y-6">
+            
+            {/* Box MUA VÉ */}
             {(listing.exchangeType === 'SELL' || listing.exchangeType === 'BOTH') && (
-              <Paper sx={{ p: 3, mb: 3 }}>
-                <Typography variant="h6" fontWeight={600} gutterBottom>
-                  Buy This Ticket
-                </Typography>
-                <Divider sx={{ mb: 2 }} />
-                <FormControl fullWidth sx={{ mb: 2 }}>
-                  <InputLabel>Payment Method</InputLabel>
-                  <Select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} label="Payment Method">
+              <div className="bg-white rounded-2xl shadow-lg p-6 border-t-4 border-primary">
+                <h3 className="text-lg font-bold text-gray-900 mb-4 uppercase flex items-center gap-2">
+                  <ShoppingCart className="w-5 h-5 text-primary" /> Mua vé này
+                </h3>
+                
+                <div className="mb-6">
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Phương thức thanh toán</label>
+                  <select 
+                    value={paymentMethod} 
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="w-full h-12 px-4 border border-gray-300 rounded-xl font-bold text-gray-700 outline-none focus:border-primary"
+                  >
                     {PAYMENT_METHODS.map((m) => (
-                      <MenuItem key={m} value={m}>{m}</MenuItem>
+                      <option key={m} value={m}>{m}</option>
                     ))}
-                  </Select>
-                </FormControl>
-                <Button
-                  variant="contained"
-                  fullWidth
-                  startIcon={<ShoppingCart />}
+                  </select>
+                </div>
+
+                <button
                   onClick={handlePurchase}
                   disabled={submitting}
+                  className="w-full h-14 bg-primary hover:bg-red-600 text-white font-bold rounded-xl transition-colors uppercase shadow-lg shadow-primary/30 disabled:opacity-50"
                 >
-                  {submitting ? 'Processing...' : `Pay ${formatCurrency(listing.listingPrice)}`}
-                </Button>
-              </Paper>
+                  {submitting ? 'Đang xử lý...' : `Thanh toán ${formatCurrency(listing.listingPrice)}`}
+                </button>
+              </div>
             )}
 
-            {/* Trade */}
+            {/* Box ĐỔI VÉ */}
             {(listing.exchangeType === 'TRADE' || listing.exchangeType === 'BOTH') && (
-              <Paper sx={{ p: 3 }}>
-                <Typography variant="h6" fontWeight={600} gutterBottom>
-                  Trade Your Ticket
-                </Typography>
-                <Divider sx={{ mb: 2 }} />
+              <div className="bg-white rounded-2xl shadow-lg p-6 border-t-4 border-blue-500">
+                <h3 className="text-lg font-bold text-gray-900 mb-4 uppercase flex items-center gap-2">
+                  <RefreshCw className="w-5 h-5 text-blue-500" /> Trao đổi vé
+                </h3>
+                
                 {myTickets.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary">
-                    You don't have any transferable tickets to trade
-                  </Typography>
+                  <p className="text-sm text-gray-500 font-medium bg-gray-50 p-4 rounded-xl border border-gray-200">
+                    Bạn hiện không có vé nào hợp lệ (cho phép chuyển nhượng) để đem ra trao đổi.
+                  </p>
                 ) : (
                   <>
-                    <FormControl fullWidth sx={{ mb: 2 }}>
-                      <InputLabel>Your Ticket</InputLabel>
-                      <Select value={tradeTicketId} onChange={(e) => setTradeTicketId(e.target.value)} label="Your Ticket">
+                    <div className="mb-6">
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Chọn vé của bạn</label>
+                      <select 
+                        value={tradeTicketId} 
+                        onChange={(e) => setTradeTicketId(e.target.value)}
+                        className="w-full h-12 px-4 border border-gray-300 rounded-xl font-bold text-gray-700 outline-none focus:border-blue-500"
+                      >
+                        <option value="" disabled>-- Chọn vé --</option>
                         {myTickets.map((t) => (
-                          <MenuItem key={t.id} value={t.id}>
-                            {t.ticketCode} - {t.eventName || 'Ticket'}
-                          </MenuItem>
+                          <option key={t.id} value={t.id}>
+                            {t.ticketCode} - {t.eventName || 'Vé sự kiện'}
+                          </option>
                         ))}
-                      </Select>
-                    </FormControl>
-                    <Button
-                      variant="outlined"
-                      fullWidth
-                      startIcon={<SwapHoriz />}
+                      </select>
+                    </div>
+
+                    <button
                       onClick={handleTrade}
                       disabled={submitting || !tradeTicketId}
+                      className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors uppercase shadow-lg shadow-blue-600/30 disabled:opacity-50"
                     >
-                      {submitting ? 'Processing...' : 'Propose Trade'}
-                    </Button>
+                      {submitting ? 'Đang xử lý...' : 'Đề xuất trao đổi'}
+                    </button>
                   </>
                 )}
-              </Paper>
+              </div>
             )}
-          </Grid>
-        </Grid>
-      </Container>
-    </>
+
+          </div>
+        </div>
+      </main>
+    </div>
   );
 };
 

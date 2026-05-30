@@ -19,7 +19,6 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Luôn fetch profile nếu chưa có user (cookie sẽ tự gửi)
     if (!user) {
       userApi
         .getProfile()

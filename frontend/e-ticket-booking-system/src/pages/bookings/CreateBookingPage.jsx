@@ -1,34 +1,19 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import {
-  Container,
-  Grid,
-  Box,
-  Typography,
-  Button,
-  Paper,
-  Divider,
-  TextField,
-  Alert,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Chip,
-  Collapse,
-  CircularProgress,
-} from '@mui/material';
-import { Add, Remove, ArrowBack, ExpandMore, ExpandLess, EventSeat, CheckCircle } from '@mui/icons-material';
+  ArrowLeft,
+  Minus,
+  Plus,
+  InfoIcon,
+  Armchair,
+  Tag,
+  ChevronDown,
+  ChevronUp,
+  CheckCircle2
+} from 'lucide-react';
 import { eventApi, scheduleApi, ticketTypeApi, bookingApi, promoCodeApi, seatApi } from '../../api';
-import { LoadingScreen, ErrorAlert, PageHeader } from '../../components/common';
-import { formatCurrency, formatDateTime, getErrorMessage } from '../../utils/helpers';
+
 
 const CreateBookingPage = () => {
   const { eventId } = useParams();
@@ -72,7 +57,9 @@ const CreateBookingPage = () => {
       if (sched.length === 1) setSelectedSchedule(sched[0].id);
       setTicketTypes(Array.isArray(ticketTypesRes.data) ? ticketTypesRes.data : []);
     } catch (err) {
-      setError(getErrorMessage(err));
+      const msg = err.response?.data?.message || err.message || "Lỗi tải dữ liệu";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -84,14 +71,12 @@ const CreateBookingPage = () => {
 
   const itemCount = Object.values(quantities).reduce((a, b) => a + b, 0);
 
-  // Check if any selected ticket type requires numbered seats
   const requiresSeats = useMemo(() => {
     return ticketTypes.some(
       (tt) => (quantities[tt.id] || 0) > 0 && tt.hasNumberedSeats === true
     );
   }, [ticketTypes, quantities]);
 
-  // Calculate how many seats are needed for numbered-seat ticket types
   const requiredSeatCount = useMemo(() => {
     return ticketTypes.reduce((acc, tt) => {
       if (tt.hasNumberedSeats === true) {
@@ -101,7 +86,6 @@ const CreateBookingPage = () => {
     }, 0);
   }, [ticketTypes, quantities]);
 
-  // Build per-section seat requirements: { sectionId: { sectionName, required } }
   const seatRequirementsBySection = useMemo(() => {
     const map = {};
     ticketTypes.forEach((tt) => {
@@ -115,12 +99,10 @@ const CreateBookingPage = () => {
     return map;
   }, [ticketTypes, quantities]);
 
-  // Get allowed section IDs from selected ticket types (for seat filtering)
   const allowedSectionIds = useMemo(() => {
     return Object.keys(seatRequirementsBySection).map(Number);
   }, [seatRequirementsBySection]);
 
-  // Count selected seats per section
   const selectedSeatsBySection = useMemo(() => {
     const map = {};
     for (const seatId of selectedSeatIds) {
@@ -132,7 +114,6 @@ const CreateBookingPage = () => {
     return map;
   }, [selectedSeatIds, availableSeats]);
 
-  // Fetch available seats when schedule is selected and seats are needed
   useEffect(() => {
     if (requiresSeats && selectedSchedule) {
       fetchAvailableSeats();
@@ -156,13 +137,11 @@ const CreateBookingPage = () => {
     }
   };
 
-  // Filter seats to only show those in allowed sections
   const filteredSeats = useMemo(() => {
     if (allowedSectionIds.length === 0) return availableSeats;
     return availableSeats.filter((s) => allowedSectionIds.includes(s.sectionId));
   }, [availableSeats, allowedSectionIds]);
 
-  // Group seats by section and row for display
   const seatsBySection = useMemo(() => {
     const map = {};
     for (const seat of filteredSeats) {
@@ -172,7 +151,6 @@ const CreateBookingPage = () => {
       if (!map[sectionKey][rowKey]) map[sectionKey][rowKey] = [];
       map[sectionKey][rowKey].push(seat);
     }
-    // Sort seats within each row by seatNumber
     for (const section of Object.values(map)) {
       for (const row of Object.keys(section)) {
         section[row].sort((a, b) => {
@@ -190,20 +168,19 @@ const CreateBookingPage = () => {
     if (!seat) return;
 
     setSelectedSeatIds((prev) => {
-      // Deselect
-      if (prev.includes(seatId)) {
-        return prev.filter((id) => id !== seatId);
+      if (prev.includes(seatId)) return prev.filter((id) => id !== seatId);
+      if (prev.length >= requiredSeatCount) {
+        toast.info(`Bạn chỉ được chọn tối đa ${requiredSeatCount} ghế.`);
+        return prev;
       }
-      // Check global limit
-      if (prev.length >= requiredSeatCount) return prev;
-      // Check per-section limit
       if (seat.sectionId && seatRequirementsBySection[seat.sectionId]) {
         const currentInSection = prev.filter((id) => {
           const s = availableSeats.find((x) => x.id === id);
           return s && s.sectionId === seat.sectionId;
         }).length;
         if (currentInSection >= seatRequirementsBySection[seat.sectionId].required) {
-          return prev; // Section limit reached
+          toast.info(`Bạn đã chọn đủ ghế cho khu vực ${seat.sectionName}`);
+          return prev;
         }
       }
       return [...prev, seatId];
@@ -216,21 +193,35 @@ const CreateBookingPage = () => {
       const newVal = Math.max(0, Math.min(max, current + delta));
       return { ...prev, [ttId]: newVal };
     });
+
     setSelectedPromo(null);
     setSelectedSeatIds([]);
+    setShowPromos(false);
   };
 
   const handleFetchPromos = async () => {
-    if (itemCount === 0) return;
+    if (itemCount === 0) {
+      toast.warning("Vui lòng chọn vé trước khi áp dụng mã giảm giá!");
+      return;
+    }
     setLoadingPromos(true);
     setShowPromos(true);
+
     try {
       const items = Object.entries(quantities)
         .filter(([, qty]) => qty > 0)
         .map(([ticketTypeId, quantity]) => ({ ticketTypeId: parseInt(ticketTypeId), quantity }));
+
       const res = await promoCodeApi.getAvailable({ eventId: parseInt(eventId), items });
-      setPromos(res.data.availablePromoCodes || []);
-    } catch {
+
+      const responseData = res.data || res;
+      const fetchedPromos = Array.isArray(responseData)
+        ? responseData
+        : (responseData.availablePromoCodes || responseData.content || []);
+
+      setPromos(fetchedPromos);
+    } catch (err) {
+      console.error("Lỗi fetch promo:", err);
       setPromos([]);
     } finally {
       setLoadingPromos(false);
@@ -242,38 +233,34 @@ const CreateBookingPage = () => {
 
   const handleSubmit = async () => {
     if (itemCount === 0) {
-      setError('Please select at least one ticket');
+      toast.error('Vui lòng chọn ít nhất 1 vé');
       return;
     }
     if (requiresSeats && !selectedSchedule) {
-      setError('Please select a schedule for seat-based tickets');
+      toast.error('Vui lòng chọn lịch chiếu cho loại vé có số ghế');
       return;
     }
     if (requiresSeats && selectedSeatIds.length !== requiredSeatCount) {
-      setError(`Please select ${requiredSeatCount} seat(s). Currently selected: ${selectedSeatIds.length}`);
+      toast.error(`Vui lòng chọn đủ ${requiredSeatCount} ghế. Đã chọn: ${selectedSeatIds.length}`);
       return;
     }
-    // Validate per-section seat counts match ticket type requirements
     if (requiresSeats) {
       for (const [sectionId, req] of Object.entries(seatRequirementsBySection)) {
         const selected = selectedSeatsBySection[Number(sectionId)] || 0;
         if (selected !== req.required) {
-          setError(`Section "${req.sectionName}" requires ${req.required} seat(s), but ${selected} selected`);
+          toast.error(`Khu vực "${req.sectionName}" yêu cầu ${req.required} ghế, nhưng bạn mới chọn ${selected}`);
           return;
         }
       }
     }
-    setError('');
+
     setSubmitting(true);
     try {
       const items = Object.entries(quantities)
         .filter(([, qty]) => qty > 0)
         .map(([ticketTypeId, quantity]) => ({ ticketTypeId: parseInt(ticketTypeId), quantity }));
 
-      const data = {
-        eventId: parseInt(eventId),
-        items,
-      };
+      const data = { eventId: parseInt(eventId), items };
       if (selectedSchedule) data.scheduleId = selectedSchedule;
       if (selectedPromo) data.promoCodeId = selectedPromo.id;
       if (requiresSeats && selectedSeatIds.length > 0) {
@@ -283,404 +270,407 @@ const CreateBookingPage = () => {
       const res = await bookingApi.create(data);
       navigate(`/payment/${res.data.id}`);
     } catch (err) {
-      setError(getErrorMessage(err));
+      const msg = err.response?.data?.message || err.message || "Lỗi tạo đơn hàng";
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) return <LoadingScreen />;
-  if (!event) return <Container sx={{ py: 4 }}><ErrorAlert message="Event not found" /></Container>;
+  // Helper Formats
+  const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
+  const formatDateTime = (dateStr) => {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleString('vi-VN', {
+      hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
+    });
+  };
+
+  if (loading) return (
+    <div className="min-h-screen bg-[#D9D9D9] flex justify-center items-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+    </div>
+  );
+
+  if (!event) return null;
 
   return (
-    <>
-      <PageHeader
-        title="Book Tickets"
-        subtitle={event.name}
-        action={
-          <Button startIcon={<ArrowBack />} onClick={() => navigate(`/events/${eventId}`)}
-            sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.3)', '&:hover': { borderColor: 'rgba(255,255,255,0.5)' } }}
-            variant="outlined"
-          >
-            Back to Event
-          </Button>
-        }
-      />
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        {error && <ErrorAlert message={error} />}
+    <div className="min-h-screen bg-[#D9D9D9] font-montserrat flex flex-col">
 
-        <Grid container spacing={4}>
-          <Grid item xs={12} md={8}>
-            {/* Schedule Selection */}
+      <main className="flex-grow max-w-[1440px] w-full mx-auto px-5 md:px-[122px] py-10 animate-fade-in">
+        <button
+          onClick={() => navigate(`/events/${eventId}`)}
+          className="flex items-center gap-2 text-gray-600 hover:text-primary font-bold mb-6 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" /> Trở lại Sự kiện
+        </button>
+
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 relative">
+
+          {/* CỘT TRÁI */}
+          <section className="md:col-span-8 space-y-6">
+
+            {/* 1. CHỌN LỊCH CHIẾU */}
             {schedules.length > 1 && (
-              <Paper sx={{ p: 3, mb: 3 }}>
-                <Typography variant="h6" gutterBottom fontWeight={600}>
-                  Select Schedule
-                </Typography>
-                <FormControl fullWidth>
-                  <InputLabel>Schedule</InputLabel>
-                  <Select
-                    value={selectedSchedule}
-                    onChange={(e) => setSelectedSchedule(e.target.value)}
-                    label="Schedule"
-                  >
-                    {schedules.map((s) => (
-                      <MenuItem key={s.id} value={s.id}>
-                        {formatDateTime(s.startTime)} - {formatDateTime(s.endTime)} ({s.availableSeats} seats left)
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Paper>
+              <div className="bg-white rounded-2xl p-7 shadow-lg">
+                <h2 className="font-bold text-primary text-xl mb-4 uppercase">Chọn Lịch Chiếu</h2>
+                <select
+                  value={selectedSchedule}
+                  onChange={(e) => setSelectedSchedule(e.target.value)}
+                  className="w-full h-12 px-4 border border-gray-300 rounded-xl font-bold text-gray-700 outline-none focus:border-primary"
+                >
+                  <option value="" disabled>-- Vui lòng chọn lịch chiếu --</option>
+                  {schedules.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {formatDateTime(s.startTime)} - {formatDateTime(s.endTime)} ({s.availableSeats} chỗ trống)
+                    </option>
+                  ))}
+                </select>
+              </div>
             )}
 
-            {/* Ticket Selection */}
-            <Paper sx={{ p: 3, mb: 3 }}>
-              <Typography variant="h6" gutterBottom fontWeight={600}>
-                Select Tickets
-              </Typography>
-              {ticketTypes.map((tt) => (
-                <Box key={tt.id}>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      py: 2,
-                    }}
-                  >
-                    <Box sx={{ flex: 1 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography fontWeight={600}>{tt.name}</Typography>
-                        {tt.hasNumberedSeats && (
-                          <Chip label="Seat selection" size="small" icon={<EventSeat />} variant="outlined" color="info" sx={{ height: 22, '& .MuiChip-label': { fontSize: '0.7rem' } }} />
-                        )}
-                      </Box>
-                      {tt.description && (
-                        <Typography variant="body2" color="text.secondary">{tt.description}</Typography>
-                      )}
-                      {tt.sectionName && (
-                        <Typography variant="caption" color="primary">{tt.sectionName}</Typography>
-                      )}
-                      <Typography variant="body2" fontWeight={600} sx={{ mt: 0.5 }}>
-                        {formatCurrency(tt.price)}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {tt.availableQuantity} available · Max {tt.maxPerBooking} per booking
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleQuantityChange(tt.id, -1, tt.maxPerBooking)}
-                        disabled={!quantities[tt.id]}
-                        sx={{ border: '1px solid', borderColor: 'divider' }}
-                      >
-                        <Remove fontSize="small" />
-                      </IconButton>
-                      <Typography sx={{ minWidth: 24, textAlign: 'center', fontWeight: 600 }}>
-                        {quantities[tt.id] || 0}
-                      </Typography>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleQuantityChange(tt.id, 1, Math.min(tt.maxPerBooking, tt.availableQuantity))}
-                        disabled={(quantities[tt.id] || 0) >= Math.min(tt.maxPerBooking, tt.availableQuantity)}
-                        sx={{ border: '1px solid', borderColor: 'divider' }}
-                      >
-                        <Add fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  </Box>
-                  <Divider />
-                </Box>
-              ))}
-            </Paper>
+            {/* 2. CHỌN VÉ */}
+            <div className="bg-white rounded-2xl p-7 shadow-lg">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="font-bold text-primary text-xl uppercase">Chọn hạng vé</h2>
+                <h2 className="font-bold text-primary text-xl uppercase">Số lượng</h2>
+              </div>
 
-            {/* Seat Selection - only shown when ticket types require numbered seats */}
+              <div className="space-y-4">
+                {ticketTypes.map((tt) => {
+                  const currentQty = quantities[tt.id] || 0;
+                  const maxAllowed = Math.min(tt.maxPerBooking, tt.availableQuantity);
+                  const isSoldOut = tt.availableQuantity <= 0;
+
+                  return (
+                    <div key={tt.id} className="relative bg-[#d9d9d9] rounded-[10px] p-5">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-bold text-gray-900 text-lg leading-none">{tt.name}</h3>
+                            {tt.hasNumberedSeats && (
+                              <span className="bg-white border border-blue-400 text-blue-500 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 uppercase">
+                                <Armchair className="w-3 h-3" /> Chọn ghế
+                              </span>
+                            )}
+                          </div>
+                          <p className="font-extrabold text-primary text-xl">
+                            {formatCurrency(tt.price)}
+                          </p>
+                          <p className="text-xs italic text-gray-500 mt-1 font-medium">
+                            {tt.sectionName ? `Khu vực: ${tt.sectionName} · ` : ''}
+                            Còn lại: {tt.availableQuantity} vé (Tối đa {tt.maxPerBooking}/đơn)
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          {isSoldOut ? (
+                            <div className="absolute bg-primary top-0 right-0 text-white rounded-[0px_10px_0px_10px] h-[30px] px-4 flex items-center">
+                              <span className="font-bold text-sm">Hết vé</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 bg-white rounded-full px-3 py-1 shadow-sm">
+                              <button
+                                onClick={() => handleQuantityChange(tt.id, -1, maxAllowed)}
+                                disabled={currentQty === 0}
+                                className="disabled:opacity-30"
+                              >
+                                <Minus className="w-4 h-4 text-primary font-bold" />
+                              </button>
+
+                              <span className="font-bold text-primary text-sm min-w-[24px] text-center">
+                                {currentQty}
+                              </span>
+
+                              <button
+                                onClick={() => handleQuantityChange(tt.id, 1, maxAllowed)}
+                                disabled={currentQty >= maxAllowed}
+                                className="disabled:opacity-30"
+                              >
+                                <Plus className="w-4 h-4 text-primary font-bold" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {tt.description && (
+                        <div className="bg-white rounded-lg p-3 mt-3">
+                          <div className="flex items-start gap-2">
+                            <InfoIcon className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
+                            <div className="font-medium text-gray-600 text-sm">
+                              {tt.description}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 3. SƠ ĐỒ CHỌN GHẾ */}
             {requiresSeats && selectedSchedule && (
-              <Paper sx={{ p: 3, mb: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <EventSeat color="primary" />
-                    <Typography variant="h6" fontWeight={600}>
-                      Select Seats
-                    </Typography>
-                  </Box>
-                  <Chip
-                    label={`${selectedSeatIds.length} / ${requiredSeatCount} selected`}
-                    color={selectedSeatIds.length === requiredSeatCount ? 'success' : 'default'}
-                    size="small"
-                  />
-                </Box>
+              <div className="bg-white rounded-2xl p-7 shadow-lg">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-4 mb-4">
+                  <div className="flex items-center gap-2">
+                    <Armchair className="w-6 h-6 text-primary" />
+                    <h2 className="font-bold text-gray-900 text-xl uppercase">Sơ đồ chọn ghế</h2>
+                  </div>
+                  <span className={`px-3 py-1 text-xs font-bold rounded-full uppercase border ${selectedSeatIds.length === requiredSeatCount ? 'bg-green-50 text-green-600 border-green-200' : 'bg-gray-100 text-gray-600 border-gray-200'
+                    }`}>
+                    Đã chọn {selectedSeatIds.length} / {requiredSeatCount}
+                  </span>
+                </div>
 
                 {loadingSeats ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                    <CircularProgress size={32} />
-                  </Box>
+                  <div className="flex justify-center py-10">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
                 ) : filteredSeats.length === 0 ? (
-                  <Alert severity="warning">No seats available for this schedule</Alert>
+                  <div className="bg-gray-50 text-gray-500 p-4 rounded-xl text-center font-medium text-sm">
+                    Không có ghế trống cho lịch chiếu này.
+                  </div>
                 ) : (
-                  <>
-                    {/* Per-section selection requirements */}
+                  <div>
                     {Object.keys(seatRequirementsBySection).length > 1 && (
-                      <Alert severity="info" sx={{ mb: 2 }}>
-                        Select seats from each section matching your ticket types.
-                      </Alert>
+                      <p className="text-sm font-bold text-blue-600 bg-blue-50 p-3 rounded-lg mb-4">
+                        * Vui lòng chọn ghế tương ứng với các khu vực của vé bạn đã đặt.
+                      </p>
                     )}
+
                     {Object.entries(seatsBySection).map(([sectionName, rows]) => {
-                      // Find matching section requirement
-                      const sectionEntry = Object.entries(seatRequirementsBySection).find(
-                        ([, val]) => val.sectionName === sectionName
-                      );
+                      const sectionEntry = Object.entries(seatRequirementsBySection).find(([, val]) => val.sectionName === sectionName);
                       const sectionId = sectionEntry ? Number(sectionEntry[0]) : null;
                       const sectionReq = sectionEntry ? sectionEntry[1].required : 0;
                       const sectionSelected = sectionId ? (selectedSeatsBySection[sectionId] || 0) : 0;
                       const sectionFull = sectionReq > 0 && sectionSelected >= sectionReq;
 
                       return (
-                        <Box key={sectionName} sx={{ mb: 3 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                            <Typography variant="subtitle2" fontWeight={600} color="text.secondary">
-                              {sectionName}
-                            </Typography>
+                        <div key={sectionName} className="mb-6 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                          <div className="flex items-center justify-between mb-3">
+                            <h3 className="font-bold text-gray-800 uppercase">{sectionName}</h3>
                             {sectionReq > 0 && (
-                              <Chip
-                                label={`${sectionSelected} / ${sectionReq} seats`}
-                                size="small"
-                                color={sectionSelected === sectionReq ? 'success' : 'default'}
-                                variant="outlined"
-                              />
+                              <span className={`text-xs font-bold px-2 py-1 rounded ${sectionSelected === sectionReq ? 'bg-green-100 text-green-700' : 'bg-white text-gray-500 shadow-sm'}`}>
+                                Đã chọn: {sectionSelected}/{sectionReq}
+                              </span>
                             )}
-                          </Box>
+                          </div>
+
                           {Object.entries(rows).map(([rowLabel, seats]) => (
-                            <Box key={rowLabel} sx={{ display: 'flex', alignItems: 'center', mb: 1, gap: 0.5 }}>
-                              <Typography
-                                variant="caption"
-                                fontWeight={600}
-                                sx={{ minWidth: 28, textAlign: 'center', color: 'text.secondary' }}
-                              >
+                            <div key={rowLabel} className="flex items-center gap-3 mb-2">
+                              <div className="w-8 text-center font-extrabold text-gray-400 bg-white shadow-sm rounded-md py-1">
                                 {rowLabel}
-                              </Typography>
-                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                              </div>
+                              <div className="flex flex-wrap gap-1.5">
                                 {seats.map((seat) => {
                                   const isSelected = selectedSeatIds.includes(seat.id);
                                   const isDisabled = !seat.available;
-                                  // Disable if this section's quota is full (unless deselecting)
                                   const isSectionFull = !isSelected && sectionFull;
                                   const isGlobalFull = !isSelected && selectedSeatIds.length >= requiredSeatCount;
+
+                                  let btnClass = "w-9 h-9 text-xs font-bold rounded-md flex items-center justify-center transition-all ";
+                                  if (isSelected) {
+                                    btnClass += "bg-primary text-white shadow-md scale-105";
+                                  } else if (isDisabled) {
+                                    btnClass += "bg-gray-200 text-gray-400 cursor-not-allowed";
+                                  } else if (isSectionFull || isGlobalFull) {
+                                    btnClass += "border border-gray-300 text-gray-400 cursor-not-allowed opacity-50";
+                                  } else {
+                                    btnClass += "border border-primary text-primary hover:bg-primary hover:text-white cursor-pointer";
+                                  }
+
                                   return (
-                                    <Button
+                                    <button
                                       key={seat.id}
-                                      size="small"
-                                      variant={isSelected ? 'contained' : 'outlined'}
                                       disabled={isDisabled || isSectionFull || isGlobalFull}
                                       onClick={() => handleSeatToggle(seat.id)}
-                                      sx={{
-                                        minWidth: 36,
-                                    height: 32,
-                                    p: 0,
-                                    fontSize: '0.7rem',
-                                    fontWeight: 600,
-                                    ...(isDisabled && {
-                                      bgcolor: 'grey.300',
-                                      color: 'grey.500',
-                                      borderColor: 'grey.300',
-                                    }),
-                                    ...(isSelected && {
-                                      bgcolor: 'primary.main',
-                                      color: 'white',
-                                    }),
-                                  }}
-                                >
-                                  {seat.seatNumber}
-                                </Button>
-                              );
-                            })}
-                          </Box>
-                        </Box>
-                      ))}
-                    </Box>
+                                      className={btnClass}
+                                    >
+                                      {seat.seatNumber}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       );
                     })}
-                  </>
-                )}
 
-                {/* Seat legend */}
-                <Box sx={{ display: 'flex', gap: 3, mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Box sx={{ width: 16, height: 16, border: '1px solid', borderColor: 'primary.main', borderRadius: 0.5 }} />
-                    <Typography variant="caption">Available</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Box sx={{ width: 16, height: 16, bgcolor: 'primary.main', borderRadius: 0.5 }} />
-                    <Typography variant="caption">Selected</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Box sx={{ width: 16, height: 16, bgcolor: 'grey.300', borderRadius: 0.5 }} />
-                    <Typography variant="caption">Taken</Typography>
-                  </Box>
-                </Box>
-              </Paper>
+                    {/* Chú giải */}
+                    <div className="flex items-center gap-6 mt-6 pt-4 border-t border-gray-200 justify-center">
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 border border-primary rounded-md" />
+                        <span className="text-xs font-bold text-gray-600">Trống</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 bg-primary rounded-md shadow-sm" />
+                        <span className="text-xs font-bold text-gray-600">Đang chọn</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 bg-gray-200 rounded-md" />
+                        <span className="text-xs font-bold text-gray-600">Đã bán</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
 
             {requiresSeats && !selectedSchedule && itemCount > 0 && (
-              <Alert severity="info" sx={{ mb: 3 }}>
-                Please select a schedule to choose your seats
-              </Alert>
+              <div className="bg-blue-50 border border-blue-200 text-blue-700 p-4 rounded-xl font-bold flex items-center gap-3 shadow-sm">
+                <InfoIcon className="w-5 h-5" /> Vui lòng chọn lịch chiếu bên trên để chọn ghế!
+              </div>
             )}
 
-            {/* Promo Code */}
-            <Paper sx={{ p: 3 }}>
-              <Box
-                sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+            {/* 4. MÃ GIẢM GIÁ */}
+            <div className="bg-white rounded-2xl p-7 shadow-lg">
+              <div
+                className="flex items-center justify-between cursor-pointer"
                 onClick={() => (showPromos ? setShowPromos(false) : handleFetchPromos())}
               >
-                <Typography variant="h6" fontWeight={600}>
-                  Promo Code
-                </Typography>
-                {showPromos ? <ExpandLess /> : <ExpandMore />}
-              </Box>
-              <Collapse in={showPromos}>
-                <Box sx={{ mt: 2 }}>
+                <h2 className="font-bold text-gray-900 text-xl uppercase flex items-center gap-2">
+                  <Tag className="w-6 h-6 text-primary" /> Mã Giảm Giá
+                </h2>
+                {showPromos ? <ChevronUp className="text-gray-500" /> : <ChevronDown className="text-gray-500" />}
+              </div>
+
+              {showPromos && (
+                <div className="mt-4 pt-4 border-t border-gray-100">
                   {loadingPromos ? (
-                    <Typography variant="body2" color="text.secondary">Loading available promos...</Typography>
+                    <div className="text-sm font-medium text-gray-500 italic">Đang tìm mã giảm giá phù hợp...</div>
                   ) : promos.length === 0 ? (
-                    <Typography variant="body2" color="text.secondary">No promo codes available for this order</Typography>
+                    <div className="text-sm font-medium text-gray-500 italic">Không có mã giảm giá nào áp dụng được cho đơn này.</div>
                   ) : (
-                    promos.map((promo) => (
-                      <Box
-                        key={promo.id}
-                        onClick={() => setSelectedPromo(selectedPromo?.id === promo.id ? null : promo)}
-                        sx={{
-                          p: 2,
-                          mb: 1,
-                          border: '1px solid',
-                          borderColor: selectedPromo?.id === promo.id ? 'grey.900' : 'divider',
-                          borderRadius: 1,
-                          cursor: 'pointer',
-                          bgcolor: selectedPromo?.id === promo.id ? 'grey.50' : 'white',
-                          '&:hover': { bgcolor: 'grey.50' },
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Box>
-                            <Typography fontWeight={600} variant="body2">{promo.code}</Typography>
-                            {promo.description && (
-                              <Typography variant="caption" color="text.secondary">{promo.description}</Typography>
-                            )}
-                          </Box>
-                          <Chip
-                            label={`-${formatCurrency(promo.discountAmount)}`}
-                            size="small"
-                            color="success"
-                            variant="outlined"
-                          />
-                        </Box>
-                      </Box>
-                    ))
+                    <div className="space-y-3">
+                      {promos.map((promo) => {
+                        const isSelected = selectedPromo?.id === promo.id;
+                        return (
+                          <div
+                            key={promo.id}
+                            onClick={() => setSelectedPromo(isSelected ? null : promo)}
+                            className={`p-4 rounded-xl border cursor-pointer transition-all flex justify-between items-center ${isSelected ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-primary/50'
+                              }`}
+                          >
+                            <div>
+                              <p className="font-extrabold text-gray-900 uppercase flex items-center gap-2">
+                                {promo.code}
+                                {isSelected && <CheckCircle2 className="w-4 h-4 text-primary" />}
+                              </p>
+                              {promo.description && (
+                                <p className="text-xs font-medium text-gray-500 mt-1">{promo.description}</p>
+                              )}
+                            </div>
+                            <span className="bg-green-100 text-green-700 font-bold px-3 py-1 rounded-full text-sm shadow-sm border border-green-200">
+                              - {formatCurrency(promo.discountAmount)}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
                   )}
-                </Box>
-              </Collapse>
-            </Paper>
-          </Grid>
-
-          {/* Order Summary */}
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 3, position: 'sticky', top: 80 }}>
-              <Typography variant="h6" gutterBottom fontWeight={600}>
-                Order Summary
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-
-              {Object.entries(quantities)
-                .filter(([, qty]) => qty > 0)
-                .map(([ttId, qty]) => {
-                  const tt = ticketTypes.find((t) => t.id === parseInt(ttId));
-                  return (
-                    <Box key={ttId} sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography variant="body2">
-                        {tt?.name} x {qty}
-                      </Typography>
-                      <Typography variant="body2" fontWeight={500}>
-                        {formatCurrency(tt?.price * qty)}
-                      </Typography>
-                    </Box>
-                  );
-                })}
-
-              {itemCount === 0 && (
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  No tickets selected
-                </Typography>
+                </div>
               )}
+            </div>
 
-              {requiresSeats && selectedSeatIds.length > 0 && (
-                <Box sx={{ mt: 1, mb: 1 }}>
-                  <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                    Selected seats:
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-                    {selectedSeatIds.map((seatId) => {
-                      const seat = filteredSeats.find((s) => s.id === seatId);
+          </section>
+
+          {/* CỘT PHẢI - TÓM TẮT ĐƠN HÀNG */}
+          <aside className="md:col-span-4 relative">
+            <div className="bg-gray-900 rounded-2xl shadow-xl sticky top-[100px] overflow-hidden">
+              <div className="p-6 bg-gray-900">
+                <h2 className="font-extrabold text-white text-xl text-center line-clamp-2 uppercase">
+                  {event.name}
+                </h2>
+              </div>
+
+              <div className="h-0.5 bg-white/20 mx-6" />
+
+              <div className="bg-white rounded-xl m-6 p-6 shadow-sm">
+                <h3 className="font-bold text-primary text-xl text-center mb-6 uppercase">
+                  Tóm tắt đơn hàng
+                </h3>
+
+                <div className="space-y-4 mb-6">
+                  {Object.entries(quantities)
+                    .filter(([, qty]) => qty > 0)
+                    .map(([ttId, qty]) => {
+                      const tt = ticketTypes.find((t) => t.id === parseInt(ttId));
                       return (
-                        <Chip
-                          key={seatId}
-                          label={seat ? `${seat.rowNumber}${seat.seatNumber}` : seatId}
-                          size="small"
-                          variant="outlined"
-                          color="primary"
-                          sx={{ height: 22 }}
-                        />
+                        <div key={ttId} className="flex justify-between items-start">
+                          <span className="font-bold text-gray-700 text-sm w-2/3 pr-2 leading-tight">
+                            {tt?.name} <span className="text-primary mx-1">x</span> {qty}
+                          </span>
+                          <span className="font-extrabold text-gray-900 text-sm">
+                            {formatCurrency(tt?.price * qty)}
+                          </span>
+                        </div>
                       );
                     })}
-                  </Box>
-                </Box>
-              )}
 
-              <Divider sx={{ my: 2 }} />
+                  {itemCount === 0 && (
+                    <div className="text-center text-gray-400 font-medium text-sm italic">
+                      Bạn chưa chọn vé nào
+                    </div>
+                  )}
+                </div>
 
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">Subtotal</Typography>
-                <Typography variant="body2" fontWeight={500}>{formatCurrency(totalAmount)}</Typography>
-              </Box>
+                {requiresSeats && selectedSeatIds.length > 0 && (
+                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 mb-6">
+                    <p className="text-xs font-bold text-gray-500 uppercase mb-2">Ghế đã chọn:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedSeatIds.map((seatId) => {
+                        const seat = filteredSeats.find((s) => s.id === seatId);
+                        return (
+                          <span key={seatId} className="bg-white border border-primary text-primary text-xs font-bold px-2 py-1 rounded shadow-sm">
+                            {seat ? `${seat.rowNumber}${seat.seatNumber}` : seatId}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
-              {selectedPromo && (
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2" color="success.main">
-                    Discount ({selectedPromo.code})
-                  </Typography>
-                  <Typography variant="body2" color="success.main" fontWeight={500}>
-                    -{formatCurrency(discountAmount)}
-                  </Typography>
-                </Box>
-              )}
+                <div className="border-t border-gray-200 pt-4 space-y-3">
+                  <div className="flex justify-between">
+                    <span className="font-bold text-gray-500 text-sm">Tạm tính:</span>
+                    <span className="font-bold text-gray-900">{formatCurrency(totalAmount)}</span>
+                  </div>
 
-              <Divider sx={{ my: 2 }} />
+                  {selectedPromo && (
+                    <div className="flex justify-between">
+                      <span className="font-bold text-green-600 text-sm">Mã ({selectedPromo.code}):</span>
+                      <span className="font-bold text-green-600">- {formatCurrency(discountAmount)}</span>
+                    </div>
+                  )}
 
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                <Typography variant="h6" fontWeight={700}>Total</Typography>
-                <Typography variant="h6" fontWeight={700}>{formatCurrency(finalAmount)}</Typography>
-              </Box>
+                  <div className="flex justify-between items-center pt-2">
+                    <span className="font-extrabold text-gray-900 text-lg uppercase">Tổng cộng:</span>
+                    <span className="font-extrabold text-primary text-2xl">{formatCurrency(finalAmount)}</span>
+                  </div>
+                </div>
 
-              <Button
-                variant="contained"
-                fullWidth
-                size="large"
-                onClick={handleSubmit}
-                disabled={submitting || itemCount === 0 || (requiresSeats && selectedSeatIds.length !== requiredSeatCount)}
-                sx={{ py: 1.5 }}
-              >
-                {submitting ? 'Processing...' : 'Proceed to Payment'}
-              </Button>
+                <div className="mt-8 flex justify-center">
+                  <button
+                    onClick={handleSubmit}
+                    disabled={submitting || itemCount === 0 || (requiresSeats && selectedSeatIds.length !== requiredSeatCount)}
+                    className="w-full bg-primary hover:bg-red-600 text-white font-bold py-3.5 rounded-xl transition-colors uppercase tracking-wide shadow-lg shadow-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {submitting ? 'Đang xử lý...' : 'THANH TOÁN NGAY'}
+                  </button>
+                </div>
 
-              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 2, textAlign: 'center' }}>
-                Booking will be held for 15 minutes
-              </Typography>
-            </Paper>
-          </Grid>
-        </Grid>
-      </Container>
-    </>
+                <p className="text-[11px] font-bold text-gray-400 text-center mt-4 uppercase">
+                  * Vé sẽ được giữ trong vòng 15 phút
+                </p>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </main>
+    </div>
   );
 };
 

@@ -14,12 +14,15 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // console.log("DEBUG ROLE:", {
+  //   userRole: user?.role,
+  //   allowedRoles: allowedRoles,
+  //   isIncludes: allowedRoles?.includes(user?.role)
+  // });
   if (allowedRoles && !allowedRoles.includes(user?.role)) {
     return <Navigate to="/403" replace />;
   }
 
-  // Nếu có children (wrapper pattern) thì render children
-  // Nếu không (layout route pattern) thì render Outlet cho child routes
   return children ? children : <Outlet />;
 };
 

@@ -62,9 +62,10 @@ function App() {
         <BrowserRouter basename="/eticket">
           <AuthProvider>
             <Routes>
+              <Route path="/" element={<HomePage />} />
               {/* ─── Public + Customer routes (MainLayout) ─── */}
               <Route element={<MainLayout />}>
-                <Route path="/" element={<HomePage />} />
+                
                 <Route path="/events" element={<EventListPage />} />
                 <Route path="/events/:id" element={<EventDetailPage />} />
                 <Route path="/marketplace" element={<MarketplacePage />} />

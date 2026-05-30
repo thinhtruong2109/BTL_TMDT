@@ -15,9 +15,7 @@ import { formatCurrency, getErrorMessage } from '../../utils/helpers';
 
 /**
  * Trang hiển thị khi thanh toán PayOS thành công.
- * 
- * Flow: PayOS → Backend (đồng bộ trạng thái + confirm booking) → Redirect browser đến đây.
- * Backend đã xử lý trước khi redirect. Frontend lấy thêm thông tin payment để hiển thị chi tiết.
+ * Đồng bộ phong cách thiết kế với hệ thống TickeZ.
  */
 const PaymentSuccessPage = () => {
   const [searchParams] = useSearchParams();
@@ -45,7 +43,6 @@ const PaymentSuccessPage = () => {
       const res = await paymentApi.getByOrderCode(orderCode);
       setPaymentInfo(res.data);
     } catch (err) {
-      // Nếu không lấy được thông tin, vẫn hiển thị status từ URL
       setError(getErrorMessage(err));
     } finally {
       setLoading(false);
@@ -54,10 +51,14 @@ const PaymentSuccessPage = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="sm" sx={{ py: 8, textAlign: 'center' }}>
-        <CircularProgress sx={{ mb: 2 }} />
-        <Typography>Đang xác nhận thanh toán...</Typography>
-      </Container>
+      <Box sx={{ bgcolor: '#f8fafc', minHeight: '85vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Montserrat, sans-serif' }}>
+        <Container maxWidth="sm" sx={{ textAlign: 'center' }}>
+          <CircularProgress sx={{ mb: 3, color: '#ef4444' }} />
+          <Typography variant="h6" fontWeight={700} color="text.secondary">
+            Đang xác nhận thanh toán...
+          </Typography>
+        </Container>
+      </Box>
     );
   }
 
@@ -65,69 +66,146 @@ const PaymentSuccessPage = () => {
   const isSuccess = status === 'SUCCESS';
 
   return (
-    <Container maxWidth="sm" sx={{ py: 6 }}>
-      <Paper sx={{ p: 4, textAlign: 'center' }}>
-        {isSuccess ? (
-          <CheckCircle sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
-        ) : (
-          <HourglassTop sx={{ fontSize: 64, color: 'warning.main', mb: 2 }} />
-        )}
-
-        <Typography variant="h5" fontWeight={700} gutterBottom>
-          {isSuccess ? 'Thanh toán thành công!' : 'Đang xử lý thanh toán'}
-        </Typography>
-
-        <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-          {isSuccess
-            ? 'Vé của bạn đã được xác nhận. Kiểm tra email để nhận vé điện tử.'
-            : 'Thanh toán đang được xử lý. Vui lòng chờ trong giây lát.'}
-        </Typography>
-
-        {error && (
-          <Alert severity="warning" sx={{ mb: 3, textAlign: 'left' }}>
-            {error}
-          </Alert>
-        )}
-
-        <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1, textAlign: 'left' }}>
-          <Typography variant="body2" color="text.secondary">
-            Mã đơn hàng: <strong>{orderCode}</strong>
-          </Typography>
-          {paymentInfo?.bookingCode && (
-            <Typography variant="body2" color="text.secondary">
-              Mã booking: <strong>{paymentInfo.bookingCode}</strong>
-            </Typography>
-          )}
-          {paymentInfo?.amount && (
-            <Typography variant="body2" color="text.secondary">
-              Số tiền: <strong>{formatCurrency(paymentInfo.amount)}</strong>
-            </Typography>
-          )}
-          <Typography variant="body2" color="text.secondary">
-            Trạng thái: <strong>{status}</strong>
-          </Typography>
-        </Box>
-
-        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
-          {paymentInfo?.bookingId && (
-            <Button
-              variant="contained"
-              startIcon={<ConfirmationNumber />}
-              onClick={() => navigate(`/my-bookings/${paymentInfo.bookingId}`)}
-            >
-              Xem chi tiết đơn
-            </Button>
-          )}
-          <Button
-            variant="outlined"
-            startIcon={<ArrowBack />}
-            onClick={() => navigate('/my-bookings')}
+    <Box sx={{ bgcolor: '#f8fafc', minHeight: '85vh', py: 8, display: 'flex', alignItems: 'center', fontFamily: 'Montserrat, sans-serif' }}>
+      <Container maxWidth="sm">
+        <Paper 
+          elevation={0}
+          sx={{ 
+            p: { xs: 4, md: 5 }, 
+            textAlign: 'center',
+            borderRadius: '24px',
+            border: '1px solid #e2e8f0',
+            boxShadow: '0 8px 30px rgba(0,0,0,0.02)'
+          }}
+        >
+          {/* Vòng tròn biểu tượng trạng thái nổi bật kiểu TickeZ */}
+          <Box
+            sx={{
+              width: 100,
+              height: 100,
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: isSuccess ? 'rgba(16, 185, 129, 0.08)' : 'rgba(245, 158, 11, 0.08)',
+              mx: 'auto',
+              mb: 3,
+            }}
           >
-            Đơn đặt vé của tôi
-          </Button>
-        </Box>
-      </Paper>
-    </Container>
+            {isSuccess ? (
+              <CheckCircle sx={{ fontSize: 52, color: '#10b981' }} />
+            ) : (
+              <HourglassTop sx={{ fontSize: 52, color: '#f59e0b' }} />
+            )}
+          </Box>
+
+          <Typography 
+            variant="h5" 
+            fontWeight={800} 
+            gutterBottom 
+            sx={{ textTransform: 'uppercase', letterSpacing: '0.5px', color: 'text.primary' }}
+          >
+            {isSuccess ? 'Thanh toán thành công!' : 'Đang xử lý thanh toán'}
+          </Typography>
+
+          <Typography 
+            variant="body1" 
+            color="text.secondary" 
+            sx={{ mb: 4, fontWeight: 500, lineHeight: 1.6, px: { xs: 1, sm: 2 } }}
+          >
+            {isSuccess
+              ? 'Vé của bạn đã được xác nhận thành công. Vui lòng kiểm tra hòm thư email để nhận vé điện tử.'
+              : 'Giao dịch thanh toán đang được xử lý kiểm tra. Vui lòng chờ trong giây lát.'}
+          </Typography>
+
+          {error && (
+            <Alert severity="warning" sx={{ mb: 4, textAlign: 'left', borderRadius: '12px' }}>
+              {error}
+            </Alert>
+          )}
+
+          <Box 
+            sx={{ 
+              mb: 4, 
+              p: 2.5, 
+              bgcolor: isSuccess ? 'rgba(16, 185, 129, 0.02)' : 'rgba(245, 158, 11, 0.02)', 
+              border: '1px dashed',
+              borderColor: isSuccess ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+              borderRadius: '16px', 
+              textAlign: 'left' 
+            }}
+          >
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 500 }}>
+              Mã đơn hàng: <strong style={{ color: '#0f172a', fontWeight: 700 }}>{orderCode}</strong>
+            </Typography>
+            {paymentInfo?.bookingCode && (
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 500 }}>
+                Mã đặt vé: <strong style={{ color: '#0f172a', fontWeight: 700 }}>{paymentInfo.bookingCode}</strong>
+              </Typography>
+            )}
+            {paymentInfo?.amount && (
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 500 }}>
+                Số tiền thanh toán: <strong style={{ color: '#0f172a', fontWeight: 700 }}>{formatCurrency(paymentInfo.amount)}</strong>
+              </Typography>
+            )}
+            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+              Trạng thái thanh toán: <strong style={{ color: isSuccess ? '#10b981' : '#f59e0b', fontWeight: 700 }}>{status}</strong>
+            </Typography>
+          </Box>
+
+          {/* Các nút bấm điều hướng bo tròn kiểu viên thuốc đặc trưng */}
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+            {paymentInfo?.bookingId && (
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<ConfirmationNumber />}
+                onClick={() => navigate(`/my-bookings/${paymentInfo.bookingId}`)}
+                sx={{
+                  fontWeight: 'bold',
+                  px: 3.5,
+                  py: 1.2,
+                  borderRadius: '25px', // Bo tròn kiểu viên thuốc TickeZ
+                  textTransform: 'uppercase',
+                  fontSize: '0.75rem',
+                  letterSpacing: '1px',
+                  bgcolor: '#ef4444',
+                  boxShadow: '0 4px 14px rgba(239, 68, 68, 0.25)',
+                  '&:hover': {
+                    bgcolor: '#dc2626',
+                    boxShadow: '0 6px 18px rgba(239, 68, 68, 0.35)',
+                  }
+                }}
+              >
+                Xem chi tiết đơn
+              </Button>
+            )}
+            
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<ArrowBack />}
+              onClick={() => navigate('/my-bookings')}
+              sx={{
+                fontWeight: 'bold',
+                px: 3.5,
+                py: 1.2,
+                borderRadius: '25px', // Bo tròn kiểu viên thuốc TickeZ
+                textTransform: 'uppercase',
+                fontSize: '0.75rem',
+                letterSpacing: '1px',
+                borderWidth: '2px',
+                '&:hover': {
+                  borderWidth: '2px',
+                }
+              }}
+            >
+              Đơn đặt vé của tôi
+            </Button>
+          </Box>
+        </Paper>
+      </Container>
+    </Box>
   );
 };
 

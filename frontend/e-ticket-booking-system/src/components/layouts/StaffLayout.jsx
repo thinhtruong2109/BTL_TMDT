@@ -26,6 +26,8 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { getRoleLabel } from '../../utils/helpers';
+import logo from '../../assets/images/logo.png';
+
 
 const DRAWER_WIDTH = 260;
 
@@ -51,8 +53,8 @@ const StaffLayout = () => {
       <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
         <Box
           component="img"
-          src={`${import.meta.env.BASE_URL}APPICON.png`}
-          alt="Alo Vé"
+          src={logo}
+          alt="TickeZ Logo"
           sx={{ height: 36, cursor: 'pointer' }}
           onClick={() => navigate('/')}
         />
