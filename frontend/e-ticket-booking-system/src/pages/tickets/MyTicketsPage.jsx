@@ -15,7 +15,6 @@ const MyTicketsPage = () => {
   const [loading, setLoading] = useState(true);
   const [statusTab, setStatusTab] = useState("all");
 
-  // Kiểm tra đăng nhập
   useEffect(() => {
     if (!isAuthenticated) {
       toast.error("Vui lòng đăng nhập để xem vé của bạn!");
@@ -23,7 +22,6 @@ const MyTicketsPage = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  // Lấy dữ liệu vé từ API
   useEffect(() => {
     if (isAuthenticated) {
       fetchTickets();
@@ -45,7 +43,6 @@ const MyTicketsPage = () => {
 
   if (!isAuthenticated) return null;
 
-  // Lọc vé theo Tab
   const filteredTickets = tickets.filter(t => {
     if (statusTab === 'valid') return !t.checkedIn;
     if (statusTab === 'used') return t.checkedIn;
@@ -120,7 +117,7 @@ const MyTicketsPage = () => {
             ))}
           </div>
 
-          {/* DANH SÁCH VÉ (GRID) */}
+          {/* DANH SÁCH VÉ */}
           <div className="w-full min-h-[500px]">
             {loading ? (
               <div className="flex justify-center items-center h-64">

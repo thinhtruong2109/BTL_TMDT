@@ -123,7 +123,7 @@ const LoginPage = () => {
         {/* RIGHT - BANNER */}
         <div className="bg-primary flex-1 relative hidden md:flex">
           <div className="absolute inset-0 flex flex-col items-center justify-center text-white px-8">
-            <img src={logo} alt="TickeZ" className="w-72 mb-4 drop-shadow-lg" />
+            <img src={logo} alt="TickeZ" className="w-72 mb-4" />
             <p className="text-2xl font-bold tracking-wider mb-10 uppercase drop-shadow-md">
               Vé liền tay - TickeZ. ngay
             </p>

@@ -1,11 +1,21 @@
-FROM node:20-alpine
+FROM node:20-alpine as builder
 WORKDIR /app
+
 COPY package*.json ./
 RUN npm install
-COPY src ./src
-COPY public ./public
-COPY index.html .
-COPY vite.config.js .
-COPY eslint.config.js .
-EXPOSE 5173
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+COPY . .
+
+RUN npm run build
+
+FROM nginx:alpine
+
+RUN rm -rf /usr/share/nginx/html/*
+
+COPY --from=builder /app/dist /usr/share/nginx/html/eticket
+
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

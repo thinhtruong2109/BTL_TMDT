@@ -239,7 +239,7 @@ const PaymentPage = () => {
           disabled={submitting || booking?.status !== 'PENDING'}
           sx={{ 
             py: 1.8, 
-            borderRadius: '25px', // Bo tròn kiểu viên thuốc đặc trưng của TickeZ
+            borderRadius: '25px', 
             bgcolor: '#ef4444',
             fontSize: '0.95rem',
             fontWeight: 'bold',
